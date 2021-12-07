@@ -1,13 +1,14 @@
-import {OperatorAbstract} from "./OperatorAbstract";
+import {OperatorExpressionAbstract} from "./OperatorExpressionAbstract";
+import {Expression} from "../Expression";
 
-export class Sin extends OperatorAbstract {
+export class SinOperator extends OperatorExpressionAbstract {
 
-  constructor() {
-    super("Sin", "sin")
+  constructor(expression: Expression) {
+    super("Sin", "sin", expression)
   }
 
   evaluate(): number {
-    return 0;
+    const result = this.expression.evaluate();
+    return Math.sin(result);
   }
-
 }

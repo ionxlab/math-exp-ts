@@ -9,5 +9,5 @@ export abstract class OperatorAbstract {
     this.symbol = symbol;
   }
 
-  abstract evaluate(): number;
+  abstract toString(): string;
 }

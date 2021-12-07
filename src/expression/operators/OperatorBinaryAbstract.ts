@@ -11,5 +11,9 @@ export abstract class OperatorBinaryAbstract extends OperatorAbstract {
     this.symbol = symbol;
   }
 
-  abstract evaluate(): number;
+  abstract evaluate(param1: number, param2: number): number;
+
+  toString(): string {
+    return this.symbol;
+  };
 }

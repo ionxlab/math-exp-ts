@@ -29,4 +29,11 @@ export class Expression {
     });
     return result;
   }
+
+  toString(): string {
+    let str = "";
+    this.terms.forEach((t, id) => {
+      str += t.toString();
+    });
+  }
 }

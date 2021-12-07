@@ -12,4 +12,9 @@ export abstract class OperatorExpressionAbstract extends OperatorAbstract {
     this.expression = expression;
   }
 
+  abstract evaluate(): number;
+
+  toString(): string {
+    return this.symbol+'('+this.expression.toString()+')';
+  };
 }

@@ -1,14 +1,14 @@
 import {OperatorExpressionAbstract} from "./OperatorExpressionAbstract";
 import {Expression} from "../Expression";
 
-export class CosOperator extends OperatorExpressionAbstract {
+export class LnOperator extends OperatorExpressionAbstract {
 
   constructor(expression: Expression) {
-    super("Cos", "cos", expression);
+    super("Ln", "Ln", expression)
   }
 
   evaluate(): number {
     const result = this.expression.evaluate();
-    return Math.cos(result);
+    return Math.log(result);
   }
 }
