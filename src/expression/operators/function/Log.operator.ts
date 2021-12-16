@@ -1,7 +1,7 @@
-import {OperatorExpressionAbstract} from "./OperatorExpressionAbstract";
+import {OperatorFunctionAbstract} from "../../abstract/OperatorFunctionAbstract";
 import {Expression} from "../Expression";
 
-export class LogOperator extends OperatorExpressionAbstract {
+export class LogOperator extends OperatorFunctionAbstract {
 
   constructor(expression: Expression) {
     super("Log", "Log", expression)

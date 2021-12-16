@@ -1,7 +1,8 @@
-import {OperandAbstract} from "./OperandAbstract";
+import {OperandAbstract} from "../abstract/OperandAbstract";
 
 
 export class Constant extends OperandAbstract {
+
   value: number;
 
   constructor(value: number) {
@@ -11,5 +12,9 @@ export class Constant extends OperandAbstract {
 
   evaluate(): number {
     return this.value;
+  }
+
+  toString(): string {
+    return this.value.toString();
   }
 }

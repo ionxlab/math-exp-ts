@@ -1,4 +1,4 @@
-import {OperandAbstract} from "./OperandAbstract";
+import {OperandAbstract} from "../abstract/OperandAbstract";
 
 
 export class Variable extends OperandAbstract {
@@ -17,5 +17,9 @@ export class Variable extends OperandAbstract {
 
   evaluate(): number {
     return (this.coefficient*this.value);
+  }
+
+  toString(): string {
+    return this.coefficient.toString()+this.letter;
   }
 }

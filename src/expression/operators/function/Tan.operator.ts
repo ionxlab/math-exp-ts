@@ -1,7 +1,7 @@
-import {OperatorExpressionAbstract} from "./OperatorExpressionAbstract";
-import {Expression} from "../Expression";
+import {OperatorFunctionAbstract} from "../../abstract/OperatorFunctionAbstract";
+import {Expression} from "../../Expression";
 
-export class TanOperator extends OperatorExpressionAbstract {
+export class TanOperator extends OperatorFunctionAbstract {
 
   constructor(expression: Expression) {
     super("Tan", "tan", expression);
