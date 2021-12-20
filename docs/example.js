@@ -1,0 +1,13 @@
+"use strict";
+exports.__esModule = true;
+var math_exp_ts_1 = require("math-exp-ts");
+var before = Date.now();
+var builder = new math_exp_ts_1.ExpressionBuilder(new math_exp_ts_1.Variable('A', 2), new math_exp_ts_1.PlusOperator(), new math_exp_ts_1.SquareRootOperator(new math_exp_ts_1.Constant(875654)));
+math_exp_ts_1.Expression.debug = false;
+math_exp_ts_1.Variable.values.set('A', 27);
+var value = builder.getExpression().evaluate();
+var after = Date.now();
+var diff = after - before;
+console.log("Evaluated in:", diff, "ms");
+console.log("Expression:", builder.getExpression().toString());
+console.log("Value:", value);
