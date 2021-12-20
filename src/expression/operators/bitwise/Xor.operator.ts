@@ -1,11 +1,11 @@
-import {OperatorBeforeAfterAbstract} from "../../abstract/OperatorBeforeAfterAbstract";
+import {OperatorLeftRightAbstract} from "../../abstract/OperatorLeftRightAbstract";
 
 
-export class XorOperator extends OperatorBeforeAfterAbstract {
+export class XorOperator extends OperatorLeftRightAbstract {
 
   readonly precedence: number = 7;
 
-  evaluate(before: number, after: number): number {
-    return this.before ^ this.after;
+  evaluate(left: number, right: number): number {
+    return left ^  right;
   }
 }

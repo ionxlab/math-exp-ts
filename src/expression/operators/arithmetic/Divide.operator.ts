@@ -1,6 +1,7 @@
-import {OperatorBeforeAfterAbstract} from "../../abstract/OperatorBeforeAfterAbstract";
+import {OperatorLeftRightAbstract} from "../../abstract/OperatorLeftRightAbstract";
+import {DivisionByZeroException} from "../../../exceptions/DivisionByZeroException";
 
-export class DivideOperator extends OperatorBeforeAfterAbstract {
+export class DivideOperator extends OperatorLeftRightAbstract {
 
   readonly precedence: number = 13;
 
@@ -8,7 +9,10 @@ export class DivideOperator extends OperatorBeforeAfterAbstract {
     super("Divide", "/")
   }
 
-  evaluate(): number {
-    return this.before/this.after;
+  evaluate(left:number, right:number): number {
+    if(right == 0)
+      throw new DivisionByZeroException();
+
+    return left/right;
   }
 }

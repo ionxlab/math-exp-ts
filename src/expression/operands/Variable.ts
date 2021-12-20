@@ -1,10 +1,10 @@
 import {OperandAbstract} from "../abstract/OperandAbstract";
-
+import {VariableMap} from "../utils/VariableMap";
 
 export class Variable extends OperandAbstract {
   private coefficient: number = 0;
   private letter: string;
-  private value: number = 0;
+  private static _values = new VariableMap();
 
   constructor(letter: string, coefficient?: number, value?: number) {
     super();
@@ -12,11 +12,18 @@ export class Variable extends OperandAbstract {
     if(coefficient !== undefined)
       this.coefficient = coefficient;
     if(value !== undefined)
-      this.value = value;
+      Variable._values.set(this.letter, value);
+  }
+
+  static get values(): VariableMap {
+    return Variable._values;
   }
 
   evaluate(): number {
-    return (this.coefficient*this.value);
+    let val = Variable._values.get(this.letter);
+    if(val == undefined)
+      val = 0;
+    return (this.coefficient*val);
   }
 
   toString(): string {

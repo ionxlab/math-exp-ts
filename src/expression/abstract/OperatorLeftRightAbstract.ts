@@ -1,12 +1,8 @@
 import {OperatorAbstract} from "./OperatorAbstract";
-import {TermAbstract} from "./TermAbstract";
 
-
-export abstract class OperatorBeforeAfterAbstract extends OperatorAbstract {
+export abstract class OperatorLeftRightAbstract extends OperatorAbstract {
   name: string;
   symbol: string;
-  before: number;
-  after: number;
 
   protected constructor(name: string, symbol: string) {
     super(name, symbol);
@@ -14,7 +10,7 @@ export abstract class OperatorBeforeAfterAbstract extends OperatorAbstract {
     this.symbol = symbol;
   }
 
-  abstract evaluate(before: number, after: number): number ;
+  abstract evaluate(left: number, right: number): number ;
 
   toString(): string {
     return this.symbol;

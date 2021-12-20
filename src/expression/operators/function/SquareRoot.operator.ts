@@ -1,10 +1,11 @@
 import {OperatorFunctionAbstract} from "../../abstract/OperatorFunctionAbstract";
 import {Expression} from "../../Expression";
+import {TermAbstract} from "../../abstract/TermAbstract";
 
 export class SquareRootOperator extends OperatorFunctionAbstract {
 
-  constructor(expression: Expression) {
-    super("Sqrt", "√", expression);
+  constructor(...terms: TermAbstract[]) {
+    super("Sqrt", "√", new Expression(...terms));
   }
 
   evaluate(): number {

@@ -17,6 +17,6 @@ export abstract class OperatorFunctionAbstract extends OperatorAbstract {
   abstract evaluate(): number ;
 
   toString(): string {
-    return this.symbol+'('+this.expression.toString()+')';
+    return this.symbol+this.expression.toString();
   };
 }

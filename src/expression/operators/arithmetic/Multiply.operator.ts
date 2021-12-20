@@ -1,6 +1,6 @@
-import {OperatorBeforeAfterAbstract} from "../../abstract/OperatorBeforeAfterAbstract";
+import {OperatorLeftRightAbstract} from "../../abstract/OperatorLeftRightAbstract";
 
-export class MultiplyOperator extends OperatorBeforeAfterAbstract {
+export class MultiplyOperator extends OperatorLeftRightAbstract {
 
   readonly precedence: number = 13;
 
@@ -8,7 +8,7 @@ export class MultiplyOperator extends OperatorBeforeAfterAbstract {
     super("Multiply", "*")
   }
 
-  evaluate(): number {
-    return this.before*this.after;
+  evaluate(left:number, right:number): number {
+    return left*right;
   }
 }

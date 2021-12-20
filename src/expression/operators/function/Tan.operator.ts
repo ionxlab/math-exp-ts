@@ -1,10 +1,11 @@
 import {OperatorFunctionAbstract} from "../../abstract/OperatorFunctionAbstract";
 import {Expression} from "../../Expression";
+import {TermAbstract} from "../../abstract/TermAbstract";
 
 export class TanOperator extends OperatorFunctionAbstract {
 
-  constructor(expression: Expression) {
-    super("Tan", "tan", expression);
+  constructor(...terms: TermAbstract[]) {
+    super("Tan", "tan", new Expression(...terms));
   }
 
   evaluate(): number {
