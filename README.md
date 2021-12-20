@@ -1,6 +1,6 @@
 # Math-exp-ts
 
-Math-exp is a math expression builder and parser libary with many symbols.
+Math-exp is a math expression builder and parser library.
 
 This version is written in typescript 
 
@@ -16,4 +16,10 @@ npm install git+https://github.com/ionxlab/math-exp-ts.git
 
 ## Usage
 
-Import the library and provide an expression string to evaluate or build one from symbols.
+Import the library and:
+
+- Provide an expression string to evaluate 
+
+or
+
+- Build an expression from term operands/operators and evaluate it.

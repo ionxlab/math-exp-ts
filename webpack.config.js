@@ -6,8 +6,8 @@ const distPath = path.resolve(__dirname, './dist');
 
 module.exports = {
   entry: {
-    'xlog': './src/index.ts',
-    'xlog.min': './src/index.ts'
+    'math-exp': './src/index.ts',
+    'math-exp.min': './src/index.ts'
   },
   devtool: "source-map",
   output: {
@@ -16,7 +16,7 @@ module.exports = {
     clean: true,
     filename: '[name].js',
     library: {
-      name: 'XLog',
+      name: 'math-exp',
       type: 'umd',
       umdNamedDefine: true
     }
@@ -27,7 +27,7 @@ module.exports = {
   plugins: [
     new NpmDtsPlugin({
       logLevel: 'warn',
-      output: path.join(distPath, 'xlog.d.ts'),
+      output: path.join(distPath, 'math-exp.d.ts'),
     })
   ],
   optimization: {

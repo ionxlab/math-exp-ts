@@ -1,7 +1,7 @@
 {
   "name": "math-exp-ts",
   "version": "0.1.0",
-  "description": "A math expression builder and parser with many symbols.",
+  "description": "A math expression builder and parser.",
   "author": "Spacexion",
   "license": "MIT",
   "main": "dist/math-exp.js",
