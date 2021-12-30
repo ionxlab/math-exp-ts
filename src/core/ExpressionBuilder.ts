@@ -1,5 +1,5 @@
-import {Expression} from "../expression/Expression";
 import {TermAbstract} from "../expression/abstract/TermAbstract";
+import {Expression} from "../expression";
 
 
 export class ExpressionBuilder {
@@ -15,7 +15,7 @@ export class ExpressionBuilder {
     if(index!==undefined)
       this.expression.terms.splice(index, 0, term);
     else
-      this.expression.push(term);
+      this.expression.terms.push(term);
 
     return this.expression.terms.length;
   }

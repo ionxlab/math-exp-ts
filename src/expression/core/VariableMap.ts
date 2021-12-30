@@ -58,6 +58,12 @@ export class VariableMap extends Map<string, number> {
     this.set('X', 0);
     this.set('Y', 0);
     this.set('Z', 0);
+
+    this.set('pi', Math.PI);
+    this.set('π', Math.PI);
+
+    this.set('phi', (1+Math.sqrt(5))/2);
+    this.set('φ', (1+Math.sqrt(5))/2);
   }
 }
 

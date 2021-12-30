@@ -3,11 +3,8 @@ import {DivisionByZeroException} from "../../../exceptions/DivisionByZeroExcepti
 
 export class DivideOperator extends OperatorLeftRightAbstract {
 
+  static readonly names: Array<string> = new Array<string>("/");
   readonly precedence: number = 13;
-
-  constructor() {
-    super("Divide", "/")
-  }
 
   evaluate(left:number, right:number): number {
     if(right == 0)

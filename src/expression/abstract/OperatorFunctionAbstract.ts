@@ -1,22 +1,27 @@
 import {OperatorAbstract} from "./OperatorAbstract";
-import {Expression} from "../Expression";
-
+import {Expression} from "../core/Expression";
+import {OperandAbstract} from "./OperandAbstract";
 
 export abstract class OperatorFunctionAbstract extends OperatorAbstract {
-  name: string;
-  symbol: string;
-  expression: Expression;
 
   readonly precedence: number = 18;
+  private _expression: Expression;
 
-  protected constructor(name: string, symbol: string, expression?: Expression) {
-    super(name, symbol);
-    this.expression = expression;
+  protected constructor(expression?: Expression) {
+    super();
+    this._expression = expression;
+  }
+
+  get expression(): Expression {
+    return this._expression;
   }
 
   abstract evaluate(): number ;
 
-  toString(): string {
-    return this.symbol+this.expression.toString();
+  toString(nameId?:number): string {
+    let id = 0;
+    if(nameId !== undefined && nameId >= 0 && nameId < OperatorAbstract.names.length)
+      id = 0;
+    return OperatorAbstract.names[id]+this._expression.toString();
   };
 }

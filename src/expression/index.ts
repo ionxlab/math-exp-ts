@@ -1,8 +1,6 @@
 
 
-export {Expression} from './Expression'
-export {VariableMap} from './utils/VariableMap'
-
+export * from './core'
 export * from './operators'
 export * from './operands'
 

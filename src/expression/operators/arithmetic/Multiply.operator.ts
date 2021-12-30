@@ -2,11 +2,8 @@ import {OperatorLeftRightAbstract} from "../../abstract/OperatorLeftRightAbstrac
 
 export class MultiplyOperator extends OperatorLeftRightAbstract {
 
+  static readonly names: Array<string> = new Array<string>("*");
   readonly precedence: number = 13;
-
-  constructor() {
-    super("Multiply", "*")
-  }
 
   evaluate(left:number, right:number): number {
     return left*right;

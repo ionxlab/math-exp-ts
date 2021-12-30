@@ -1,42 +1,32 @@
-import {OperatorAbstract} from "./abstract/OperatorAbstract";
-import {OperandAbstract} from "./abstract/OperandAbstract";
-import {TermAbstract} from "./abstract/TermAbstract";
-import {OperatorLeftRightAbstract} from "./abstract/OperatorLeftRightAbstract";
-import {OperatorFunctionAbstract} from "./abstract/OperatorFunctionAbstract";
-import {Constant} from "./operands";
-import {MissingTermException} from "../exceptions/MissingTermException";
-import {MissingOperandException} from "../exceptions/MissingOperandException";
-import {EmptyExpressionException} from "../exceptions/EmptyExpressionException";
+import {OperatorAbstract} from "../abstract/OperatorAbstract";
+import {OperandAbstract} from "../abstract/OperandAbstract";
+import {TermAbstract} from "../abstract/TermAbstract";
+import {OperatorLeftRightAbstract} from "../abstract/OperatorLeftRightAbstract";
+import {OperatorFunctionAbstract} from "../abstract/OperatorFunctionAbstract";
+import {Constant} from "../operands";
+import {MissingTermException} from "../../exceptions/MissingTermException";
+import {MissingOperandException} from "../../exceptions/MissingOperandException";
+import {EmptyExpressionException} from "../../exceptions/EmptyExpressionException";
 
 export class Expression extends TermAbstract {
   public static debug = true;
   readonly precedence: number = 19;
 
-  terms: Array<TermAbstract> = new Array<TermAbstract>();
+  private _terms: Array<TermAbstract> = new Array<TermAbstract>();
   private brackets: boolean = true;
 
   constructor(...terms: TermAbstract[]) {
     super();
     if(terms !== undefined)
-      this.terms = this.terms.concat(terms);
+      this._terms = this._terms.concat(terms);
   }
 
-  push(term: TermAbstract): Expression {
-    this.terms.push(term);
-    return this;
+  get terms(): Array<TermAbstract> {
+    return this._terms;
   }
 
-  pop(): TermAbstract {
-    return this.terms.pop();
-  }
-
-  shift(): TermAbstract {
-    return this.terms.shift();
-  }
-
-  unshift(term: TermAbstract): Expression {
-    this.terms.unshift(term);
-    return this;
+  set terms(value: Array<TermAbstract>) {
+    this._terms = value;
   }
 
   setBrackets(active: boolean) {
@@ -45,18 +35,19 @@ export class Expression extends TermAbstract {
 
   evaluate(): number {
 
-    if(this.terms.length==0)
+    if(this._terms.length==0)
       throw new EmptyExpressionException();
 
     Expression.Log("Evaluating:", this.toString());
 
     let temp = this.clone();
 
-    while(temp.terms.length>1 || !(temp.terms[0] instanceof OperandAbstract)) {
+    // iterate over all terms in loop and resolve term by precedence order
+    while(temp._terms.length>1 || !(temp._terms[0] instanceof OperandAbstract)) {
 
       let highest = -1;
       let highestId = -1;
-      temp.terms.forEach((t, id) => {
+      temp._terms.forEach((t, id) => {
         if(t.precedence>highest) {
           highest = t.precedence;
           highestId = id;
@@ -66,14 +57,14 @@ export class Expression extends TermAbstract {
       Expression.Log("Temporary expression:", temp.toString());
     }
 
-    return (temp.terms[0] as OperandAbstract).evaluate();
+    return (temp._terms[0] as OperandAbstract).evaluate();
   }
 
   private static evaluateTerm(expression: Expression, index: number): Expression {
 
     let temp = expression.clone();
 
-    const term = temp.terms[index];
+    const term = temp._terms[index];
     Expression.Log("Evaluating Term:", term.toString());
 
     let value = 0;
@@ -82,12 +73,12 @@ export class Expression extends TermAbstract {
     } else if(term instanceof Expression) {
       Expression.Log("Term is an 'Expression'");
       value = term.evaluate();
-      temp.terms[index] = new Constant(value);
+      temp._terms[index] = new Constant(value);
     } else if(term instanceof OperatorAbstract) {
       if(term instanceof OperatorLeftRightAbstract) {
         Expression.Log("Term is an 'OperatorLeftRight'");
-        const left = temp.terms[index-1];
-        const right = temp.terms[index+1];
+        const left = temp._terms[index-1];
+        const right = temp._terms[index+1];
 
         if(!(left instanceof OperandAbstract))
           throw new MissingOperandException("Left argument of operator '"+term.toString()+"' is invalid.");
@@ -98,18 +89,18 @@ export class Expression extends TermAbstract {
 
         Expression.Log("Evaluated Value: ", value);
 
-        temp.terms[index] = new Constant(value);
-        temp.terms.splice(index+1, 1);
-        temp.terms.splice(index-1, 1);
+        temp._terms[index] = new Constant(value);
+        temp._terms.splice(index+1, 1);
+        temp._terms.splice(index-1, 1);
       } else if(term instanceof OperatorFunctionAbstract) {
         Expression.Log("Term is an 'OperatorFunction'");
         value = term.evaluate();
-        temp.terms[index] = new Constant(value);
+        temp._terms[index] = new Constant(value);
       }
     } else if(term instanceof OperandAbstract) {
       Expression.Log("Term is an 'Operand'");
       value = term.evaluate();
-      temp.terms[index] = new Constant(value);
+      temp._terms[index] = new Constant(value);
     }
 
     return temp;
@@ -123,13 +114,13 @@ export class Expression extends TermAbstract {
   clone(): Expression {
     let clone = new Expression();
     clone.brackets = this.brackets;
-    clone.terms = clone.terms.concat(this.terms);
+    clone._terms = clone._terms.concat(this._terms);
     return clone;
   }
 
   toString(): string {
     let str = "";
-    this.terms.forEach((t, id) => {
+    this._terms.forEach((t, id) => {
       str += t.toString();
     });
     if(this.brackets)

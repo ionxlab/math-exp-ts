@@ -3,6 +3,7 @@ import {OperatorLeftRightAbstract} from "../../abstract/OperatorLeftRightAbstrac
 
 export class AndOperator extends OperatorLeftRightAbstract {
 
+  static readonly names: Array<string> = new Array<string>("&");
   readonly precedence: number = 8;
 
   evaluate(left: number, right: number): number {

@@ -2,11 +2,8 @@ import {OperatorLeftRightAbstract} from "../../abstract/OperatorLeftRightAbstrac
 
 export class ExponentOperator extends OperatorLeftRightAbstract {
 
+  static readonly names: Array<string> = new Array<string>("^");
   readonly precedence: number = 14;
-
-  constructor() {
-    super("Exponent", "^")
-  }
 
   evaluate(left:number, right:number): number {
     return Math.pow(left, right);

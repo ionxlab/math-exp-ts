@@ -2,11 +2,8 @@ import {OperatorLeftRightAbstract} from "../../abstract/OperatorLeftRightAbstrac
 
 export class MinusOperator extends OperatorLeftRightAbstract {
 
+  static readonly names: Array<string> = new Array<string>("-");
   readonly precedence: number = 12;
-
-  constructor() {
-    super("Minus", "-")
-  }
 
   evaluate(left:number, right:number): number {
     return left-right;
