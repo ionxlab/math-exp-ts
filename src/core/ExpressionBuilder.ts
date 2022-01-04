@@ -8,7 +8,7 @@ export class ExpressionBuilder {
 
   constructor(...terms: TermAbstract[]) {
     this.expression.terms = this.expression.terms.concat(terms);
-    this.expression.setBrackets(false);
+    this.expression.brackets = false;
   }
 
   add(term: TermAbstract, index?: number): number {
@@ -18,6 +18,10 @@ export class ExpressionBuilder {
       this.expression.terms.push(term);
 
     return this.expression.terms.length;
+  }
+
+  addAll(...terms: TermAbstract[]) {
+    this.expression.terms = this.expression.terms.concat(terms);
   }
 
   remove(index): Expression {

@@ -1,10 +1,11 @@
-import {Expression} from "../expression";
+import {Expression, MultiplyOperator} from "../expression";
 import {Constant, Variable} from "../expression";
-import * as Operators from "../expression/operators"
-import {OperatorLeftRightAbstract} from "../expression/abstract/OperatorLeftRightAbstract";
-import {OperatorFunctionAbstract} from "../expression/abstract/OperatorFunctionAbstract";
+import * as Operators from "../expression/operators";
 import {BracketsMissmatchException} from "../exceptions/BracketsMissmatchException";
 import {TermAbstract} from "../expression/abstract/TermAbstract";
+import {EmptyExpressionStringException} from "../exceptions/EmptyExpressionStringException";
+import {UndefinedExpressionStringException} from "../exceptions/UndefinedExpressionStringException";
+import {ParserException} from "../exceptions/ParserException";
 
 const OperatorKeys = Object.keys(Operators);
 
@@ -15,16 +16,22 @@ export class ExpressionParser {
     this.expressionStr = expressionStr;
   }
 
-  setExpressionStr(value: string | undefined) {
-    this.expressionStr = value;
+  setExpressionStr(expressionStr?: string) {
+    this.expressionStr = expressionStr;
   }
 
-  parse(): Expression {
+  parse(expressionStr?: string): Expression {
+    if(expressionStr !== undefined)
+      this.setExpressionStr(expressionStr);
+
+    // check expression string
     if(!this.expressionStr)
-      throw new Error("Expression is undefined.");
+      throw new UndefinedExpressionStringException();
+    if(this.expressionStr == "")
+      throw new EmptyExpressionStringException();
 
     // parse all elements from expression string
-    const matches = this.expressionStr.match(/[a-z0-9]+|[+\-*\/()^|&]/gi);
+    const matches = this.expressionStr.match(/[a-z0-9]+|[+\-*\/()^]|[&|]+/gi);
 
     // check number of brackets
     const leftBrackets = matches.filter(value => value=='(');
@@ -32,71 +39,92 @@ export class ExpressionParser {
     if(leftBrackets.length !== rightBrackets.length)
       throw new BracketsMissmatchException();
 
-
+    // create a depth array for nested expressions
     let exp = new Expression();
-    const expTree = new Array<Expression>();
-    expTree.push(exp);
+    const expStack = new Array<Expression>();
+    expStack.push(exp);
 
     // iterate over all expression term elements
     matches.forEach((elem, index) => {
-      const lastExp = expTree[expTree.length-1];
-      const term = this.parseTerm(elem, lastExp);
+      const currentExp = expStack[expStack.length-1];
+
+      // parse elem and return a TermAbstract
+      const term = ExpressionParser.parseElem(elem, currentExp);
+      if(!term)
+        throw new ParserException("Unknown element: ["+elem+"]");
+
+      // if term is an Expression
       if(term instanceof Expression) {
-        if(term !== lastExp) {
-          lastExp.terms.push(term);
-          expTree.push(term);
+        // if expression is not the current expression, push to expression stack
+        if(term !== currentExp) {
+          expStack.push(term);
+        // else the expression is closed, remove from stack
         } else {
-          expTree.pop();
+          expStack.pop();
         }
-      } else {
-        lastExp.terms.push(term);
       }
     });
 
     return exp;
   }
 
-  private parseTerm(elem: string, currentExpression: Expression): TermAbstract {
+  private static parseElem(elem: string, currentExpression: Expression): TermAbstract {
+    let term;
 
-    // if match numerical constant [0-9]+
+    // if elem matches a numerical constant [0-9]+
     let match = elem.match(/^[0-9]+$/i);
     if(match) {
-      return new Constant(parseFloat(elem));
+      term = new Constant(parseFloat(elem));
+      currentExpression.terms.push(term);
+      return term;
     }
 
-    // if match a left bracket
-    match = elem.match(/^\($/i);
+    // if elem matches a left bracket with a coefficient
+    match = elem.match(/^([0-9]*)\($/i);
     if(match) {
-      return new Expression();
+      if(match[1]) {
+        currentExpression.terms.push(new Constant(parseFloat(match[1])));
+        currentExpression.terms.push(new MultiplyOperator());
+      }
+
+      term = new Expression();
+      currentExpression.terms.push(term);
+      return term;
     }
 
-    // if match a right bracket
+    // if elem matches a right bracket
     match = elem.match(/^\)$/i);
     if(match) {
       return currentExpression;
     }
 
-    // if match an operator
-    // iterate over all operators
-    for(const key of OperatorKeys){
-      const Operator = Operators[key];
-      // iterate over all operator names
-      for(const name of Operator.names) {
-        // if name is same as term element, create and push operator to expression
-        if(name === elem) {
-          if(Operator.prototype instanceof OperatorLeftRightAbstract) {
-            return new Operators[key]();
-          } else if(Operator.prototype instanceof OperatorFunctionAbstract) {
-            return new Operators[key]();
-          }
-        }
-      }
-    }
-
     // if match a named variable with a coefficient
     match = elem.match(/^([0-9]*)([a-z]+)$/i);
     if(match) {
-      return new Variable(match[1], parseFloat(match[2]));
+      if(match[1].length>0) {
+        currentExpression.terms.push(new Constant(parseFloat(match[1])));
+        currentExpression.terms.push(new MultiplyOperator());
+      }
+
+      // if elem matches an operator
+      // iterate over all operators
+      for(const key of OperatorKeys){
+        const Operator = Operators[key];
+        // iterate over all operator names
+        for(const name of Operator.names) {
+          // if name matches, return the constructed operator
+          if(name === match[2]) {
+            term = new Operators[key]();
+            currentExpression.terms.push(term);
+            return term;
+          }
+        }
+      }
+
+      // it's just a variable
+      term = new Variable(match[2]);
+      currentExpression.terms.push(term);
+      return term;
     }
   }
 }
