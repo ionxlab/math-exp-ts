@@ -3,7 +3,7 @@ import {OperandAbstract} from "../abstract/OperandAbstract";
 import {TermAbstract} from "../abstract/TermAbstract";
 import {OperatorLeftRightAbstract} from "../abstract/OperatorLeftRightAbstract";
 import {OperatorFunctionAbstract} from "../abstract/OperatorFunctionAbstract";
-import {Constant} from "../operands";
+import {Constant, Variable} from "../operands";
 import {MissingTermException} from "../../exceptions/MissingTermException";
 import {MissingOperandException} from "../../exceptions/MissingOperandException";
 import {EmptyExpressionException} from "../../exceptions/EmptyExpressionException";
@@ -12,8 +12,8 @@ export class Expression extends TermAbstract {
   public static debug = true;
   readonly precedence: number = 19;
 
+  private _brackets: boolean = true;
   private _terms: Array<TermAbstract> = new Array<TermAbstract>();
-  private brackets: boolean = true;
 
   constructor(...terms: TermAbstract[]) {
     super();
@@ -29,31 +29,38 @@ export class Expression extends TermAbstract {
     this._terms = value;
   }
 
-  setBrackets(active: boolean) {
-    this.brackets = active;
+  get brackets() {
+    return this._brackets;
+  }
+
+  set brackets(active: boolean) {
+    this._brackets = active;
   }
 
   evaluate(): number {
 
+    // check terms
     if(this._terms.length==0)
       throw new EmptyExpressionException();
 
     Expression.Log("Evaluating:", this.toString());
 
+    // make a clone for editing
     let temp = this.clone();
 
-    // iterate over all terms in loop and resolve term by precedence order
-    while(temp._terms.length>1 || !(temp._terms[0] instanceof OperandAbstract)) {
+    // loop until one constant is left
+    while(temp._terms.length>1 || !(temp._terms[0] instanceof Constant)) {
 
       let highest = -1;
       let highestId = -1;
+      // iterate over all terms and evaluate highest precedence
       temp._terms.forEach((t, id) => {
         if(t.precedence>highest) {
           highest = t.precedence;
           highestId = id;
         }
       });
-      temp = Expression.evaluateTerm(temp, highestId);
+      Expression.evaluateTerm(temp, highestId);
       Expression.Log("Temporary expression:", temp.toString());
     }
 
@@ -62,48 +69,65 @@ export class Expression extends TermAbstract {
 
   private static evaluateTerm(expression: Expression, index: number): Expression {
 
-    let temp = expression.clone();
-
-    const term = temp._terms[index];
+    const term = expression._terms[index];
     Expression.Log("Evaluating Term:", term.toString());
 
     let value = 0;
-    if(!term) {
+    if(!term)
       throw new MissingTermException("Term at '"+index+"' is missing.");
-    } else if(term instanceof Expression) {
+
+    if(term instanceof Expression) {
       Expression.Log("Term is an 'Expression'");
       value = term.evaluate();
-      temp._terms[index] = new Constant(value);
+      expression._terms[index] = new Constant(value, true);
+
+    } else if(term instanceof OperandAbstract) {
+      if(term instanceof Constant)
+        Expression.Log("Term is a 'Constant'");
+      if(term instanceof Variable)
+        Expression.Log("Term is a 'Variable'");
+
+      value = term.evaluate();
+      expression._terms[index] = new Constant(value, term.brackets);
+
     } else if(term instanceof OperatorAbstract) {
+
       if(term instanceof OperatorLeftRightAbstract) {
         Expression.Log("Term is an 'OperatorLeftRight'");
-        const left = temp._terms[index-1];
-        const right = temp._terms[index+1];
+        const left = expression._terms[index-1];
+        const right = expression._terms[index+1];
 
-        if(!(left instanceof OperandAbstract))
-          throw new MissingOperandException("Left argument of operator '"+term.toString()+"' is invalid.");
-        if(!(right instanceof OperandAbstract))
-          throw new MissingOperandException("Right argument of operator '"+term.toString()+"' is invalid.");
+        if(!(left instanceof Constant))
+          throw new MissingOperandException("Operator '"+term.toString()+"' left argument '"+left.toString()+"' is invalid.");
+        if(!(right instanceof Constant))
+          throw new MissingOperandException("Operator '"+term.toString()+"' right argument '"+right.toString()+"' is invalid.");
 
-        value = term.evaluate((left as OperandAbstract).evaluate(), (right as OperandAbstract).evaluate());
+        value = term.evaluate(left, right);
 
         Expression.Log("Evaluated Value: ", value);
 
-        temp._terms[index] = new Constant(value);
-        temp._terms.splice(index+1, 1);
-        temp._terms.splice(index-1, 1);
+        expression._terms[index] = new Constant(value);
+        expression._terms.splice(index+1, 1);
+        expression._terms.splice(index-1, 1);
+
       } else if(term instanceof OperatorFunctionAbstract) {
         Expression.Log("Term is an 'OperatorFunction'");
-        value = term.evaluate();
-        temp._terms[index] = new Constant(value);
+        const param = expression._terms[index+1];
+
+        if(!(param instanceof Constant))
+          throw new MissingOperandException("Operator '"+term.toString()+"' argument '"+param.toString()+"' is invalid.");
+
+        value = term.evaluate(param);
+        expression._terms[index] = new Constant(value);
+        expression._terms.splice(index+1, 1);
+      } else {
+        Expression.Log("Unknown operator term ?");
       }
-    } else if(term instanceof OperandAbstract) {
-      Expression.Log("Term is an 'Operand'");
-      value = term.evaluate();
-      temp._terms[index] = new Constant(value);
+    } else {
+      Expression.Log("Unknown term ?");
     }
 
-    return temp;
+    return expression;
   }
 
   private static Log(...args: Object[]) {

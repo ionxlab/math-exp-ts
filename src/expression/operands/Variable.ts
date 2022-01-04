@@ -1,33 +1,29 @@
 import {OperandAbstract} from "../abstract/OperandAbstract";
-import {VariableMap} from "../core";
+import {Variables} from "../core";
 
 
 export class Variable extends OperandAbstract {
-  private coefficient: number = 0;
-  private identifier: string;
-  private static _values = new VariableMap();
+  private identifier: string
+  readonly precedence: number = 20;
 
-  constructor(identifier: string, coefficient?: number, value?: number) {
-    super();
+  constructor(identifier: string, brackets?: boolean, value?: number) {
+    super(brackets);
     this.identifier = identifier;
-    if(coefficient !== undefined)
-      this.coefficient = coefficient;
     if(value !== undefined)
-      Variable._values.set(this.identifier, value);
-  }
-
-  static get values(): VariableMap {
-    return Variable._values;
+      Variables.map.set(this.identifier, value);
   }
 
   evaluate(): number {
-    let val = Variable._values.get(this.identifier);
+    let val = Variables.map.get(this.identifier);
     if(val == undefined)
       val = 0;
-    return (this.coefficient*val);
+    return val;
   }
 
   toString(): string {
-    return this.coefficient.toString()+this.identifier;
+    let str = this.identifier.toString();
+    if(this.brackets)
+      str = "("+str+")";
+    return str;
   }
 }

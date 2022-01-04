@@ -1,4 +1,4 @@
 
 
 export {Expression} from './Expression'
-export {VariableMap} from './VariableMap'
+export {Variables} from './Variables'
