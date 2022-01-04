@@ -1,14 +1,90 @@
-import {ExpressionBuilder, Expression, Variable, Constant, PlusOperator, SquareRootOperator} from 'math-exp-ts';
+import {ExpressionBuilder, MultiplyOperator, Expression, Variables, Variable, Constant, PlusOperator, MinusOperator, SquareRootOperator} from 'math-exp-ts';
 
-const before = Date.now();
-const builder = new ExpressionBuilder(new Variable('A', 2),  new PlusOperator(), new SquareRootOperator(new Constant(875654)));
-Expression.debug = false;
-Variable.values.set('A', 27);
-let value = builder.getExpression().evaluate();
+// Measure elapsed time of a lambda function
+function chrono(lambda: () => any) {
+  const before = Date.now();
+  lambda();
+  const after = Date.now();
+  const diff = after-before;
+  console.log("Evaluated in:", diff, "ms");
+}
 
-const after = Date.now();
-const diff = after-before;
+// Configure static properties
+Variables.map.set('A', 9);
+//Expression.debug = false;
 
-console.log("Evaluated in:", diff, "ms");
-console.log("Expression:", builder.getExpression().toString());
-console.log("Value:", value);
+console.log("------------------------------------------------------------------");
+chrono(() => {
+  const builder = new ExpressionBuilder(
+    new Constant(2),
+    new PlusOperator(),
+    new Constant(2),
+    new MultiplyOperator(),
+    new Variable('A'));
+
+  const value = builder.getExpression().evaluate();
+
+  console.log("Expression:", builder.getExpression().toString());
+  console.log("Variable: 'A'=", Variables.map.get('A'));
+  console.log("Value:", value);
+});
+
+console.log("------------------------------------------------------------------");
+chrono(() => {
+  const builder = new ExpressionBuilder(
+    new Expression(
+      new Constant(2),
+      new PlusOperator(),
+      new Constant(2)
+    ),
+    new MultiplyOperator(),
+    new Variable('A'),
+  );
+
+  const value = builder.getExpression().evaluate();
+
+  console.log("Expression:", builder.getExpression().toString());
+  console.log("Variable: 'A'=", Variables.map.get('A'));
+  console.log("Value:", value);
+});
+
+console.log("------------------------------------------------------------------");
+chrono(() => {
+  const builder = new ExpressionBuilder(
+    new SquareRootOperator(),
+    new Variable('A', true));
+
+  const value = builder.getExpression().evaluate();
+
+  console.log("Expression:", builder.getExpression().toString());
+  console.log("Variable: 'A'=", Variables.map.get('A'));
+  console.log("Value:", value);
+});
+
+console.log("------------------------------------------------------------------");
+chrono(() => {
+  const builder = new ExpressionBuilder(
+    new Constant(2),
+    new Expression(
+      new Constant(2),
+      new PlusOperator(),
+      new Constant(2),
+      new MultiplyOperator(),
+      new Expression(
+        new Constant(4),
+        new MinusOperator(),
+        new Constant(2),
+        new MultiplyOperator(),
+        new Variable('A')
+      )
+    )
+  );
+
+  const value = builder.getExpression().evaluate();
+
+  console.log("Expression:", builder.getExpression().toString());
+  console.log("Variable: 'A'=", Variables.map.get('A'));
+  console.log("Value:", value);
+});
+
+console.log("------------------------------------------------------------------");
