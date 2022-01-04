@@ -21,19 +21,22 @@ return /******/ (() => { // webpackBootstrap
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ExpressionBuilder = void 0;
-const Expression_1 = __webpack_require__(/*! ../expression/Expression */ "./src/expression/Expression.ts");
+const expression_1 = __webpack_require__(/*! ../expression */ "./src/expression/index.ts");
 class ExpressionBuilder {
     constructor(...terms) {
-        this.expression = new Expression_1.Expression();
+        this.expression = new expression_1.Expression();
         this.expression.terms = this.expression.terms.concat(terms);
-        this.expression.setBrackets(false);
+        this.expression.brackets = false;
     }
     add(term, index) {
         if (index !== undefined)
             this.expression.terms.splice(index, 0, term);
         else
-            this.expression.push(term);
+            this.expression.terms.push(term);
         return this.expression.terms.length;
+    }
+    addAll(...terms) {
+        this.expression.terms = this.expression.terms.concat(terms);
     }
     remove(index) {
         if (index >= 0 && index < this.expression.terms.length)
@@ -61,16 +64,135 @@ exports.ExpressionBuilder = ExpressionBuilder;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ExpressionParser = void 0;
-const Expression_1 = __webpack_require__(/*! ../expression/Expression */ "./src/expression/Expression.ts");
+const expression_1 = __webpack_require__(/*! ../expression */ "./src/expression/index.ts");
+const expression_2 = __webpack_require__(/*! ../expression */ "./src/expression/index.ts");
+const Operators = __webpack_require__(/*! ../expression/operators */ "./src/expression/operators/index.ts");
+const BracketsMissmatchException_1 = __webpack_require__(/*! ../exceptions/BracketsMissmatchException */ "./src/exceptions/BracketsMissmatchException.ts");
+const EmptyExpressionStringException_1 = __webpack_require__(/*! ../exceptions/EmptyExpressionStringException */ "./src/exceptions/EmptyExpressionStringException.ts");
+const UndefinedExpressionStringException_1 = __webpack_require__(/*! ../exceptions/UndefinedExpressionStringException */ "./src/exceptions/UndefinedExpressionStringException.ts");
+const ParserException_1 = __webpack_require__(/*! ../exceptions/ParserException */ "./src/exceptions/ParserException.ts");
+const OperatorKeys = Object.keys(Operators);
 class ExpressionParser {
-    constructor() {
+    constructor(expressionStr) {
+        this.expressionStr = expressionStr;
     }
-    parse() {
-        let exp = new Expression_1.Expression();
+    setExpressionStr(expressionStr) {
+        this.expressionStr = expressionStr;
+    }
+    parse(expressionStr) {
+        if (expressionStr !== undefined)
+            this.setExpressionStr(expressionStr);
+        // check expression string
+        if (!this.expressionStr)
+            throw new UndefinedExpressionStringException_1.UndefinedExpressionStringException();
+        if (this.expressionStr == "")
+            throw new EmptyExpressionStringException_1.EmptyExpressionStringException();
+        // parse all elements from expression string
+        const matches = this.expressionStr.match(/[a-z0-9]+|[+\-*\/()^]|[&|]+/gi);
+        // check number of brackets
+        const leftBrackets = matches.filter(value => value == '(');
+        const rightBrackets = matches.filter(value => value == ')');
+        if (leftBrackets.length !== rightBrackets.length)
+            throw new BracketsMissmatchException_1.BracketsMissmatchException();
+        // create a depth array for nested expressions
+        let exp = new expression_1.Expression();
+        const expStack = new Array();
+        expStack.push(exp);
+        // iterate over all expression term elements
+        matches.forEach((elem, index) => {
+            const currentExp = expStack[expStack.length - 1];
+            // parse elem and return a TermAbstract
+            const term = ExpressionParser.parseElem(elem, currentExp);
+            if (!term)
+                throw new ParserException_1.ParserException("Unknown element: [" + elem + "]");
+            // if term is an Expression
+            if (term instanceof expression_1.Expression) {
+                // if expression is not the current expression, push to expression stack
+                if (term !== currentExp) {
+                    expStack.push(term);
+                    // else the expression is closed, remove from stack
+                }
+                else {
+                    expStack.pop();
+                }
+            }
+        });
         return exp;
+    }
+    static parseElem(elem, currentExpression) {
+        let term;
+        // if elem matches a numerical constant [0-9]+
+        let match = elem.match(/^[0-9]+$/i);
+        if (match) {
+            term = new expression_2.Constant(parseFloat(elem));
+            currentExpression.terms.push(term);
+            return term;
+        }
+        // if elem matches a left bracket with a coefficient
+        match = elem.match(/^([0-9]*)\($/i);
+        if (match) {
+            if (match[1]) {
+                currentExpression.terms.push(new expression_2.Constant(parseFloat(match[1])));
+                currentExpression.terms.push(new expression_1.MultiplyOperator());
+            }
+            term = new expression_1.Expression();
+            currentExpression.terms.push(term);
+            return term;
+        }
+        // if elem matches a right bracket
+        match = elem.match(/^\)$/i);
+        if (match) {
+            return currentExpression;
+        }
+        // if match a named variable with a coefficient
+        match = elem.match(/^([0-9]*)([a-z]+)$/i);
+        if (match) {
+            if (match[1].length > 0) {
+                currentExpression.terms.push(new expression_2.Constant(parseFloat(match[1])));
+                currentExpression.terms.push(new expression_1.MultiplyOperator());
+            }
+            // if elem matches an operator
+            // iterate over all operators
+            for (const key of OperatorKeys) {
+                const Operator = Operators[key];
+                // iterate over all operator names
+                for (const name of Operator.names) {
+                    // if name matches, return the constructed operator
+                    if (name === match[2]) {
+                        term = new Operators[key]();
+                        currentExpression.terms.push(term);
+                        return term;
+                    }
+                }
+            }
+            // it's just a variable
+            term = new expression_2.Variable(match[2]);
+            currentExpression.terms.push(term);
+            return term;
+        }
     }
 }
 exports.ExpressionParser = ExpressionParser;
+
+
+/***/ }),
+
+/***/ "./src/exceptions/BracketsMissmatchException.ts":
+/*!******************************************************!*\
+  !*** ./src/exceptions/BracketsMissmatchException.ts ***!
+  \******************************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BracketsMissmatchException = void 0;
+const ParserException_1 = __webpack_require__(/*! ./ParserException */ "./src/exceptions/ParserException.ts");
+class BracketsMissmatchException extends ParserException_1.ParserException {
+    constructor(message) {
+        super(message);
+    }
+}
+exports.BracketsMissmatchException = BracketsMissmatchException;
 
 
 /***/ }),
@@ -111,6 +233,26 @@ class EmptyExpressionException extends EvaluateException_1.EvaluateException {
     }
 }
 exports.EmptyExpressionException = EmptyExpressionException;
+
+
+/***/ }),
+
+/***/ "./src/exceptions/EmptyExpressionStringException.ts":
+/*!**********************************************************!*\
+  !*** ./src/exceptions/EmptyExpressionStringException.ts ***!
+  \**********************************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.EmptyExpressionStringException = void 0;
+const ParserException_1 = __webpack_require__(/*! ./ParserException */ "./src/exceptions/ParserException.ts");
+class EmptyExpressionStringException extends ParserException_1.ParserException {
+    constructor(message) {
+        super(message);
+    }
+}
+exports.EmptyExpressionStringException = EmptyExpressionStringException;
 
 
 /***/ }),
@@ -174,132 +316,41 @@ exports.MissingTermException = MissingTermException;
 
 /***/ }),
 
-/***/ "./src/expression/Expression.ts":
-/*!**************************************!*\
-  !*** ./src/expression/Expression.ts ***!
-  \**************************************/
+/***/ "./src/exceptions/ParserException.ts":
+/*!*******************************************!*\
+  !*** ./src/exceptions/ParserException.ts ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ParserException = void 0;
+class ParserException extends Error {
+    constructor(message) {
+        super(message);
+    }
+}
+exports.ParserException = ParserException;
+
+
+/***/ }),
+
+/***/ "./src/exceptions/UndefinedExpressionStringException.ts":
+/*!**************************************************************!*\
+  !*** ./src/exceptions/UndefinedExpressionStringException.ts ***!
+  \**************************************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Expression = void 0;
-const OperatorAbstract_1 = __webpack_require__(/*! ./abstract/OperatorAbstract */ "./src/expression/abstract/OperatorAbstract.ts");
-const OperandAbstract_1 = __webpack_require__(/*! ./abstract/OperandAbstract */ "./src/expression/abstract/OperandAbstract.ts");
-const TermAbstract_1 = __webpack_require__(/*! ./abstract/TermAbstract */ "./src/expression/abstract/TermAbstract.ts");
-const OperatorLeftRightAbstract_1 = __webpack_require__(/*! ./abstract/OperatorLeftRightAbstract */ "./src/expression/abstract/OperatorLeftRightAbstract.ts");
-const OperatorFunctionAbstract_1 = __webpack_require__(/*! ./abstract/OperatorFunctionAbstract */ "./src/expression/abstract/OperatorFunctionAbstract.ts");
-const Constant_1 = __webpack_require__(/*! ./operands/Constant */ "./src/expression/operands/Constant.ts");
-const MissingTermException_1 = __webpack_require__(/*! ../exceptions/MissingTermException */ "./src/exceptions/MissingTermException.ts");
-const MissingOperandException_1 = __webpack_require__(/*! ../exceptions/MissingOperandException */ "./src/exceptions/MissingOperandException.ts");
-const EmptyExpressionException_1 = __webpack_require__(/*! ../exceptions/EmptyExpressionException */ "./src/exceptions/EmptyExpressionException.ts");
-class Expression extends TermAbstract_1.TermAbstract {
-    constructor(...terms) {
-        super();
-        this.precedence = 19;
-        this.terms = new Array();
-        this.brackets = true;
-        if (terms !== undefined)
-            this.terms = this.terms.concat(terms);
-    }
-    push(term) {
-        this.terms.push(term);
-        return this;
-    }
-    pop() {
-        return this.terms.pop();
-    }
-    shift() {
-        return this.terms.shift();
-    }
-    unshift(term) {
-        this.terms.unshift(term);
-        return this;
-    }
-    setBrackets(active) {
-        this.brackets = active;
-    }
-    evaluate() {
-        if (this.terms.length == 0)
-            throw new EmptyExpressionException_1.EmptyExpressionException();
-        this.Log("Evaluating:", this.toString());
-        let temp = this.clone();
-        while (temp.terms.length > 1 || !(temp.terms[0] instanceof OperandAbstract_1.OperandAbstract)) {
-            let highest = -1;
-            let highestId = -1;
-            temp.terms.forEach((t, id) => {
-                if (t.precedence > highest) {
-                    highest = t.precedence;
-                    highestId = id;
-                }
-            });
-            temp = this.evaluateTerm(temp, highestId);
-            this.Log("Temporary expression:", temp.toString());
-        }
-        return temp.terms[0].evaluate();
-    }
-    evaluateTerm(expression, index) {
-        let temp = expression.clone();
-        const term = temp.terms[index];
-        this.Log("Evaluating Term:", term.toString());
-        let value = 0;
-        if (!term) {
-            throw new MissingTermException_1.MissingTermException("Term at '" + index + "' is missing.");
-        }
-        else if (term instanceof Expression) {
-            this.Log("Term is an 'Expression'");
-            value = term.evaluate();
-            temp.terms[index] = new Constant_1.Constant(value);
-        }
-        else if (term instanceof OperatorAbstract_1.OperatorAbstract) {
-            if (term instanceof OperatorLeftRightAbstract_1.OperatorLeftRightAbstract) {
-                this.Log("Term is an 'OperatorLeftRight'");
-                const left = temp.terms[index - 1];
-                const right = temp.terms[index + 1];
-                if (!(left instanceof OperandAbstract_1.OperandAbstract))
-                    throw new MissingOperandException_1.MissingOperandException("Left argument of operator '" + term.toString() + "' is invalid.");
-                if (!(right instanceof OperandAbstract_1.OperandAbstract))
-                    throw new MissingOperandException_1.MissingOperandException("Right argument of operator '" + term.toString() + "' is invalid.");
-                value = term.evaluate(left.evaluate(), right.evaluate());
-                this.Log("Evaluated Value: ", value);
-                temp.terms[index] = new Constant_1.Constant(value);
-                temp.terms.splice(index + 1, 1);
-                temp.terms.splice(index - 1, 1);
-            }
-            else if (term instanceof OperatorFunctionAbstract_1.OperatorFunctionAbstract) {
-                this.Log("Term is an 'OperatorFunction'");
-                value = term.evaluate();
-                temp.terms[index] = new Constant_1.Constant(value);
-            }
-        }
-        else if (term instanceof OperandAbstract_1.OperandAbstract) {
-            this.Log("Term is an 'Operand'");
-            value = term.evaluate();
-            temp.terms[index] = new Constant_1.Constant(value);
-        }
-        return temp;
-    }
-    Log(...args) {
-        if (Expression.debug)
-            console.log.apply(console, args);
-    }
-    clone() {
-        let clone = new Expression();
-        clone.brackets = this.brackets;
-        clone.terms = clone.terms.concat(this.terms);
-        return clone;
-    }
-    toString() {
-        let str = "";
-        this.terms.forEach((t, id) => {
-            str += t.toString();
-        });
-        if (this.brackets)
-            str = "(" + str + ")";
-        return str;
+exports.UndefinedExpressionStringException = void 0;
+const ParserException_1 = __webpack_require__(/*! ./ParserException */ "./src/exceptions/ParserException.ts");
+class UndefinedExpressionStringException extends ParserException_1.ParserException {
+    constructor(message) {
+        super(message);
     }
 }
-exports.Expression = Expression;
-Expression.debug = true;
+exports.UndefinedExpressionStringException = UndefinedExpressionStringException;
 
 
 /***/ }),
@@ -315,9 +366,18 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OperandAbstract = void 0;
 const TermAbstract_1 = __webpack_require__(/*! ./TermAbstract */ "./src/expression/abstract/TermAbstract.ts");
 class OperandAbstract extends TermAbstract_1.TermAbstract {
-    constructor() {
-        super(...arguments);
+    constructor(brackets) {
+        super();
         this.precedence = 0;
+        this._brackets = false;
+        if (brackets !== undefined)
+            this._brackets = brackets;
+    }
+    get brackets() {
+        return this._brackets;
+    }
+    set brackets(active) {
+        this._brackets = active;
     }
 }
 exports.OperandAbstract = OperandAbstract;
@@ -336,11 +396,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OperatorAbstract = void 0;
 const TermAbstract_1 = __webpack_require__(/*! ./TermAbstract */ "./src/expression/abstract/TermAbstract.ts");
 class OperatorAbstract extends TermAbstract_1.TermAbstract {
-    constructor(name, symbol) {
-        super();
-        this.name = name;
-        this.symbol = symbol;
+    toString(nameId) {
+        let id = 0;
+        if (nameId !== undefined && nameId >= 0 && nameId < this.names.length)
+            id = 0;
+        return this.names[id];
     }
+    ;
 }
 exports.OperatorAbstract = OperatorAbstract;
 
@@ -358,15 +420,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OperatorFunctionAbstract = void 0;
 const OperatorAbstract_1 = __webpack_require__(/*! ./OperatorAbstract */ "./src/expression/abstract/OperatorAbstract.ts");
 class OperatorFunctionAbstract extends OperatorAbstract_1.OperatorAbstract {
-    constructor(name, symbol, expression) {
-        super(name, symbol);
+    constructor() {
+        super(...arguments);
         this.precedence = 18;
-        this.expression = expression;
     }
-    toString() {
-        return this.symbol + this.expression.toString();
-    }
-    ;
 }
 exports.OperatorFunctionAbstract = OperatorFunctionAbstract;
 
@@ -384,15 +441,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OperatorLeftRightAbstract = void 0;
 const OperatorAbstract_1 = __webpack_require__(/*! ./OperatorAbstract */ "./src/expression/abstract/OperatorAbstract.ts");
 class OperatorLeftRightAbstract extends OperatorAbstract_1.OperatorAbstract {
-    constructor(name, symbol) {
-        super(name, symbol);
-        this.name = name;
-        this.symbol = symbol;
-    }
-    toString() {
-        return this.symbol;
-    }
-    ;
 }
 exports.OperatorLeftRightAbstract = OperatorLeftRightAbstract;
 
@@ -415,6 +463,237 @@ exports.TermAbstract = TermAbstract;
 
 /***/ }),
 
+/***/ "./src/expression/core/Expression.ts":
+/*!*******************************************!*\
+  !*** ./src/expression/core/Expression.ts ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Expression = void 0;
+const OperatorAbstract_1 = __webpack_require__(/*! ../abstract/OperatorAbstract */ "./src/expression/abstract/OperatorAbstract.ts");
+const OperandAbstract_1 = __webpack_require__(/*! ../abstract/OperandAbstract */ "./src/expression/abstract/OperandAbstract.ts");
+const TermAbstract_1 = __webpack_require__(/*! ../abstract/TermAbstract */ "./src/expression/abstract/TermAbstract.ts");
+const OperatorLeftRightAbstract_1 = __webpack_require__(/*! ../abstract/OperatorLeftRightAbstract */ "./src/expression/abstract/OperatorLeftRightAbstract.ts");
+const OperatorFunctionAbstract_1 = __webpack_require__(/*! ../abstract/OperatorFunctionAbstract */ "./src/expression/abstract/OperatorFunctionAbstract.ts");
+const operands_1 = __webpack_require__(/*! ../operands */ "./src/expression/operands/index.ts");
+const MissingTermException_1 = __webpack_require__(/*! ../../exceptions/MissingTermException */ "./src/exceptions/MissingTermException.ts");
+const MissingOperandException_1 = __webpack_require__(/*! ../../exceptions/MissingOperandException */ "./src/exceptions/MissingOperandException.ts");
+const EmptyExpressionException_1 = __webpack_require__(/*! ../../exceptions/EmptyExpressionException */ "./src/exceptions/EmptyExpressionException.ts");
+class Expression extends TermAbstract_1.TermAbstract {
+    constructor(...terms) {
+        super();
+        this.precedence = 19;
+        this._brackets = true;
+        this._terms = new Array();
+        if (terms !== undefined)
+            this._terms = this._terms.concat(terms);
+    }
+    get terms() {
+        return this._terms;
+    }
+    set terms(value) {
+        this._terms = value;
+    }
+    get brackets() {
+        return this._brackets;
+    }
+    set brackets(active) {
+        this._brackets = active;
+    }
+    evaluate() {
+        // check terms
+        if (this._terms.length == 0)
+            throw new EmptyExpressionException_1.EmptyExpressionException();
+        Expression.Log("Evaluating:", this.toString());
+        // make a clone for editing
+        let temp = this.clone();
+        // loop until one constant is left
+        while (temp._terms.length > 1 || !(temp._terms[0] instanceof operands_1.Constant)) {
+            let highest = -1;
+            let highestId = -1;
+            // iterate over all terms and evaluate highest precedence
+            temp._terms.forEach((t, id) => {
+                if (t.precedence > highest) {
+                    highest = t.precedence;
+                    highestId = id;
+                }
+            });
+            Expression.evaluateTerm(temp, highestId);
+            Expression.Log("Temporary expression:", temp.toString());
+        }
+        return temp._terms[0].evaluate();
+    }
+    static evaluateTerm(expression, index) {
+        const term = expression._terms[index];
+        Expression.Log("Evaluating Term:", term.toString());
+        let value = 0;
+        if (!term)
+            throw new MissingTermException_1.MissingTermException("Term at '" + index + "' is missing.");
+        if (term instanceof Expression) {
+            Expression.Log("Term is an 'Expression'");
+            value = term.evaluate();
+            expression._terms[index] = new operands_1.Constant(value, true);
+        }
+        else if (term instanceof OperandAbstract_1.OperandAbstract) {
+            if (term instanceof operands_1.Constant)
+                Expression.Log("Term is a 'Constant'");
+            if (term instanceof operands_1.Variable)
+                Expression.Log("Term is a 'Variable'");
+            value = term.evaluate();
+            expression._terms[index] = new operands_1.Constant(value, term.brackets);
+        }
+        else if (term instanceof OperatorAbstract_1.OperatorAbstract) {
+            if (term instanceof OperatorLeftRightAbstract_1.OperatorLeftRightAbstract) {
+                Expression.Log("Term is an 'OperatorLeftRight'");
+                const left = expression._terms[index - 1];
+                const right = expression._terms[index + 1];
+                if (!(left instanceof operands_1.Constant))
+                    throw new MissingOperandException_1.MissingOperandException("Operator '" + term.toString() + "' left argument '" + left.toString() + "' is invalid.");
+                if (!(right instanceof operands_1.Constant))
+                    throw new MissingOperandException_1.MissingOperandException("Operator '" + term.toString() + "' right argument '" + right.toString() + "' is invalid.");
+                value = term.evaluate(left, right);
+                Expression.Log("Evaluated Value: ", value);
+                expression._terms[index] = new operands_1.Constant(value);
+                expression._terms.splice(index + 1, 1);
+                expression._terms.splice(index - 1, 1);
+            }
+            else if (term instanceof OperatorFunctionAbstract_1.OperatorFunctionAbstract) {
+                Expression.Log("Term is an 'OperatorFunction'");
+                const param = expression._terms[index + 1];
+                if (!(param instanceof operands_1.Constant))
+                    throw new MissingOperandException_1.MissingOperandException("Operator '" + term.toString() + "' argument '" + param.toString() + "' is invalid.");
+                value = term.evaluate(param);
+                expression._terms[index] = new operands_1.Constant(value);
+                expression._terms.splice(index + 1, 1);
+            }
+            else {
+                Expression.Log("Unknown operator term ?");
+            }
+        }
+        else {
+            Expression.Log("Unknown term ?");
+        }
+        return expression;
+    }
+    static Log(...args) {
+        if (Expression.debug)
+            console.log.apply(console, args);
+    }
+    clone() {
+        let clone = new Expression();
+        clone.brackets = this.brackets;
+        clone._terms = clone._terms.concat(this._terms);
+        return clone;
+    }
+    toString() {
+        let str = "";
+        this._terms.forEach((t, id) => {
+            str += t.toString();
+        });
+        if (this.brackets)
+            str = "(" + str + ")";
+        return str;
+    }
+}
+exports.Expression = Expression;
+Expression.debug = true;
+
+
+/***/ }),
+
+/***/ "./src/expression/core/Variables.ts":
+/*!******************************************!*\
+  !*** ./src/expression/core/Variables.ts ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Variables = void 0;
+class Variables {
+}
+exports.Variables = Variables;
+Variables.map = new Map([
+    ['a', 0],
+    ['b', 0],
+    ['c', 0],
+    ['d', 0],
+    ['e', 0],
+    ['f', 0],
+    ['g', 0],
+    ['h', 0],
+    ['i', 0],
+    ['j', 0],
+    ['k', 0],
+    ['l', 0],
+    ['m', 0],
+    ['n', 0],
+    ['o', 0],
+    ['p', 0],
+    ['q', 0],
+    ['r', 0],
+    ['s', 0],
+    ['t', 0],
+    ['u', 0],
+    ['v', 0],
+    ['w', 0],
+    ['x', 0],
+    ['y', 0],
+    ['z', 0],
+    ['A', 0],
+    ['B', 0],
+    ['C', 0],
+    ['D', 0],
+    ['E', 0],
+    ['F', 0],
+    ['G', 0],
+    ['H', 0],
+    ['I', 0],
+    ['J', 0],
+    ['K', 0],
+    ['L', 0],
+    ['M', 0],
+    ['N', 0],
+    ['O', 0],
+    ['P', 0],
+    ['Q', 0],
+    ['R', 0],
+    ['S', 0],
+    ['T', 0],
+    ['U', 0],
+    ['V', 0],
+    ['W', 0],
+    ['X', 0],
+    ['Y', 0],
+    ['Z', 0],
+    ['pi', Math.PI],
+    ['π', Math.PI],
+    ['phi', (1 + Math.sqrt(5)) / 2],
+    ['φ', (1 + Math.sqrt(5)) / 2]
+]);
+
+
+/***/ }),
+
+/***/ "./src/expression/core/index.ts":
+/*!**************************************!*\
+  !*** ./src/expression/core/index.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Variables = exports.Expression = void 0;
+var Expression_1 = __webpack_require__(/*! ./Expression */ "./src/expression/core/Expression.ts");
+Object.defineProperty(exports, "Expression", ({ enumerable: true, get: function () { return Expression_1.Expression; } }));
+var Variables_1 = __webpack_require__(/*! ./Variables */ "./src/expression/core/Variables.ts");
+Object.defineProperty(exports, "Variables", ({ enumerable: true, get: function () { return Variables_1.Variables; } }));
+
+
+/***/ }),
+
 /***/ "./src/expression/index.ts":
 /*!*********************************!*\
   !*** ./src/expression/index.ts ***!
@@ -433,12 +712,9 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Expression = void 0;
-var Expression_1 = __webpack_require__(/*! ./Expression */ "./src/expression/Expression.ts");
-Object.defineProperty(exports, "Expression", ({ enumerable: true, get: function () { return Expression_1.Expression; } }));
+__exportStar(__webpack_require__(/*! ./core */ "./src/expression/core/index.ts"), exports);
 __exportStar(__webpack_require__(/*! ./operators */ "./src/expression/operators/index.ts"), exports);
 __exportStar(__webpack_require__(/*! ./operands */ "./src/expression/operands/index.ts"), exports);
-__exportStar(__webpack_require__(/*! ./utils */ "./src/expression/utils/index.ts"), exports);
 
 
 /***/ }),
@@ -454,15 +730,18 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Constant = void 0;
 const OperandAbstract_1 = __webpack_require__(/*! ../abstract/OperandAbstract */ "./src/expression/abstract/OperandAbstract.ts");
 class Constant extends OperandAbstract_1.OperandAbstract {
-    constructor(value) {
-        super();
+    constructor(value, brackets) {
+        super(brackets);
         this.value = value;
     }
     evaluate() {
         return this.value;
     }
     toString() {
-        return this.value.toString();
+        let str = this.value.toString();
+        if (this.brackets)
+            str = "(" + str + ")";
+        return str;
     }
 }
 exports.Constant = Constant;
@@ -480,32 +759,29 @@ exports.Constant = Constant;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Variable = void 0;
 const OperandAbstract_1 = __webpack_require__(/*! ../abstract/OperandAbstract */ "./src/expression/abstract/OperandAbstract.ts");
-const VariableMap_1 = __webpack_require__(/*! ../utils/VariableMap */ "./src/expression/utils/VariableMap.ts");
+const core_1 = __webpack_require__(/*! ../core */ "./src/expression/core/index.ts");
 class Variable extends OperandAbstract_1.OperandAbstract {
-    constructor(letter, coefficient, value) {
-        super();
-        this.coefficient = 0;
-        this.letter = letter;
-        if (coefficient !== undefined)
-            this.coefficient = coefficient;
+    constructor(identifier, brackets, value) {
+        super(brackets);
+        this.precedence = 20;
+        this.identifier = identifier;
         if (value !== undefined)
-            Variable._values.set(this.letter, value);
-    }
-    static get values() {
-        return Variable._values;
+            core_1.Variables.map.set(this.identifier, value);
     }
     evaluate() {
-        let val = Variable._values.get(this.letter);
+        let val = core_1.Variables.map.get(this.identifier);
         if (val == undefined)
             val = 0;
-        return (this.coefficient * val);
+        return val;
     }
     toString() {
-        return this.coefficient.toString() + this.letter;
+        let str = this.identifier.toString();
+        if (this.brackets)
+            str = "(" + str + ")";
+        return str;
     }
 }
 exports.Variable = Variable;
-Variable._values = new VariableMap_1.VariableMap();
 
 
 /***/ }),
@@ -540,16 +816,18 @@ const OperatorLeftRightAbstract_1 = __webpack_require__(/*! ../../abstract/Opera
 const DivisionByZeroException_1 = __webpack_require__(/*! ../../../exceptions/DivisionByZeroException */ "./src/exceptions/DivisionByZeroException.ts");
 class DivideOperator extends OperatorLeftRightAbstract_1.OperatorLeftRightAbstract {
     constructor() {
-        super("Divide", "/");
+        super(...arguments);
+        this.names = DivideOperator.names;
         this.precedence = 13;
     }
     evaluate(left, right) {
-        if (right == 0)
+        if (right.value == 0)
             throw new DivisionByZeroException_1.DivisionByZeroException();
-        return left / right;
+        return left.value / right.value;
     }
 }
 exports.DivideOperator = DivideOperator;
+DivideOperator.names = new Array("/");
 
 
 /***/ }),
@@ -566,14 +844,16 @@ exports.ExponentOperator = void 0;
 const OperatorLeftRightAbstract_1 = __webpack_require__(/*! ../../abstract/OperatorLeftRightAbstract */ "./src/expression/abstract/OperatorLeftRightAbstract.ts");
 class ExponentOperator extends OperatorLeftRightAbstract_1.OperatorLeftRightAbstract {
     constructor() {
-        super("Exponent", "^");
+        super(...arguments);
+        this.names = ExponentOperator.names;
         this.precedence = 14;
     }
     evaluate(left, right) {
-        return Math.pow(left, right);
+        return Math.pow(left.value, right.value);
     }
 }
 exports.ExponentOperator = ExponentOperator;
+ExponentOperator.names = new Array("^");
 
 
 /***/ }),
@@ -590,14 +870,16 @@ exports.MinusOperator = void 0;
 const OperatorLeftRightAbstract_1 = __webpack_require__(/*! ../../abstract/OperatorLeftRightAbstract */ "./src/expression/abstract/OperatorLeftRightAbstract.ts");
 class MinusOperator extends OperatorLeftRightAbstract_1.OperatorLeftRightAbstract {
     constructor() {
-        super("Minus", "-");
+        super(...arguments);
+        this.names = MinusOperator.names;
         this.precedence = 12;
     }
     evaluate(left, right) {
-        return left - right;
+        return left.value - right.value;
     }
 }
 exports.MinusOperator = MinusOperator;
+MinusOperator.names = new Array("-");
 
 
 /***/ }),
@@ -613,15 +895,24 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MultiplyOperator = void 0;
 const OperatorLeftRightAbstract_1 = __webpack_require__(/*! ../../abstract/OperatorLeftRightAbstract */ "./src/expression/abstract/OperatorLeftRightAbstract.ts");
 class MultiplyOperator extends OperatorLeftRightAbstract_1.OperatorLeftRightAbstract {
-    constructor() {
-        super("Multiply", "*");
+    constructor(hidden) {
+        super();
+        this.names = MultiplyOperator.names;
         this.precedence = 13;
+        this.hidden = false;
+        this.hidden = hidden;
     }
     evaluate(left, right) {
-        return left * right;
+        return left.value * right.value;
+    }
+    toString(nameId) {
+        if (!this.hidden)
+            return super.toString(nameId);
+        return "";
     }
 }
 exports.MultiplyOperator = MultiplyOperator;
+MultiplyOperator.names = new Array("*");
 
 
 /***/ }),
@@ -638,14 +929,39 @@ exports.PlusOperator = void 0;
 const OperatorLeftRightAbstract_1 = __webpack_require__(/*! ../../abstract/OperatorLeftRightAbstract */ "./src/expression/abstract/OperatorLeftRightAbstract.ts");
 class PlusOperator extends OperatorLeftRightAbstract_1.OperatorLeftRightAbstract {
     constructor() {
-        super("Plus", "+");
+        super(...arguments);
+        this.names = PlusOperator.names;
         this.precedence = 12;
     }
     evaluate(left, right) {
-        return left + right;
+        return left.value + right.value;
     }
 }
 exports.PlusOperator = PlusOperator;
+PlusOperator.names = new Array("+");
+
+
+/***/ }),
+
+/***/ "./src/expression/operators/arithmetic/index.ts":
+/*!******************************************************!*\
+  !*** ./src/expression/operators/arithmetic/index.ts ***!
+  \******************************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PlusOperator = exports.MultiplyOperator = exports.MinusOperator = exports.ExponentOperator = exports.DivideOperator = void 0;
+var Divide_operator_1 = __webpack_require__(/*! ./Divide.operator */ "./src/expression/operators/arithmetic/Divide.operator.ts");
+Object.defineProperty(exports, "DivideOperator", ({ enumerable: true, get: function () { return Divide_operator_1.DivideOperator; } }));
+var Exponent_operator_1 = __webpack_require__(/*! ./Exponent.operator */ "./src/expression/operators/arithmetic/Exponent.operator.ts");
+Object.defineProperty(exports, "ExponentOperator", ({ enumerable: true, get: function () { return Exponent_operator_1.ExponentOperator; } }));
+var Minus_operator_1 = __webpack_require__(/*! ./Minus.operator */ "./src/expression/operators/arithmetic/Minus.operator.ts");
+Object.defineProperty(exports, "MinusOperator", ({ enumerable: true, get: function () { return Minus_operator_1.MinusOperator; } }));
+var Multiply_operator_1 = __webpack_require__(/*! ./Multiply.operator */ "./src/expression/operators/arithmetic/Multiply.operator.ts");
+Object.defineProperty(exports, "MultiplyOperator", ({ enumerable: true, get: function () { return Multiply_operator_1.MultiplyOperator; } }));
+var Plus_operator_1 = __webpack_require__(/*! ./Plus.operator */ "./src/expression/operators/arithmetic/Plus.operator.ts");
+Object.defineProperty(exports, "PlusOperator", ({ enumerable: true, get: function () { return Plus_operator_1.PlusOperator; } }));
 
 
 /***/ }),
@@ -663,13 +979,15 @@ const OperatorLeftRightAbstract_1 = __webpack_require__(/*! ../../abstract/Opera
 class AndOperator extends OperatorLeftRightAbstract_1.OperatorLeftRightAbstract {
     constructor() {
         super(...arguments);
+        this.names = AndOperator.names;
         this.precedence = 8;
     }
     evaluate(left, right) {
-        return left & right;
+        return left.value & right.value;
     }
 }
 exports.AndOperator = AndOperator;
+AndOperator.names = new Array("&");
 
 
 /***/ }),
@@ -687,13 +1005,15 @@ const OperatorLeftRightAbstract_1 = __webpack_require__(/*! ../../abstract/Opera
 class OrOperator extends OperatorLeftRightAbstract_1.OperatorLeftRightAbstract {
     constructor() {
         super(...arguments);
+        this.names = OrOperator.names;
         this.precedence = 6;
     }
     evaluate(left, right) {
-        return left | right;
+        return left.value | right.value;
     }
 }
 exports.OrOperator = OrOperator;
+OrOperator.names = new Array("|");
 
 
 /***/ }),
@@ -711,13 +1031,34 @@ const OperatorLeftRightAbstract_1 = __webpack_require__(/*! ../../abstract/Opera
 class XorOperator extends OperatorLeftRightAbstract_1.OperatorLeftRightAbstract {
     constructor() {
         super(...arguments);
+        this.names = XorOperator.names;
         this.precedence = 7;
     }
     evaluate(left, right) {
-        return left ^ right;
+        return left.value ^ right.value;
     }
 }
 exports.XorOperator = XorOperator;
+XorOperator.names = new Array("||");
+
+
+/***/ }),
+
+/***/ "./src/expression/operators/bitwise/index.ts":
+/*!***************************************************!*\
+  !*** ./src/expression/operators/bitwise/index.ts ***!
+  \***************************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XorOperator = exports.OrOperator = exports.AndOperator = void 0;
+var And_operator_1 = __webpack_require__(/*! ./And.operator */ "./src/expression/operators/bitwise/And.operator.ts");
+Object.defineProperty(exports, "AndOperator", ({ enumerable: true, get: function () { return And_operator_1.AndOperator; } }));
+var Or_operator_1 = __webpack_require__(/*! ./Or.operator */ "./src/expression/operators/bitwise/Or.operator.ts");
+Object.defineProperty(exports, "OrOperator", ({ enumerable: true, get: function () { return Or_operator_1.OrOperator; } }));
+var Xor_operator_1 = __webpack_require__(/*! ./Xor.operator */ "./src/expression/operators/bitwise/Xor.operator.ts");
+Object.defineProperty(exports, "XorOperator", ({ enumerable: true, get: function () { return Xor_operator_1.XorOperator; } }));
 
 
 /***/ }),
@@ -732,17 +1073,18 @@ exports.XorOperator = XorOperator;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CosOperator = void 0;
 const OperatorFunctionAbstract_1 = __webpack_require__(/*! ../../abstract/OperatorFunctionAbstract */ "./src/expression/abstract/OperatorFunctionAbstract.ts");
-const Expression_1 = __webpack_require__(/*! ../../Expression */ "./src/expression/Expression.ts");
 class CosOperator extends OperatorFunctionAbstract_1.OperatorFunctionAbstract {
-    constructor(...terms) {
-        super("Cos", "cos", new Expression_1.Expression(...terms));
+    constructor() {
+        super(...arguments);
+        this.names = CosOperator.names;
     }
-    evaluate() {
-        const result = this.expression.evaluate();
+    evaluate(param) {
+        const result = param.evaluate();
         return Math.cos(result);
     }
 }
 exports.CosOperator = CosOperator;
+CosOperator.names = new Array("cos");
 
 
 /***/ }),
@@ -757,17 +1099,18 @@ exports.CosOperator = CosOperator;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LnOperator = void 0;
 const OperatorFunctionAbstract_1 = __webpack_require__(/*! ../../abstract/OperatorFunctionAbstract */ "./src/expression/abstract/OperatorFunctionAbstract.ts");
-const Expression_1 = __webpack_require__(/*! ../../Expression */ "./src/expression/Expression.ts");
 class LnOperator extends OperatorFunctionAbstract_1.OperatorFunctionAbstract {
-    constructor(...terms) {
-        super("Ln", "Ln", new Expression_1.Expression(...terms));
+    constructor() {
+        super(...arguments);
+        this.names = LnOperator.names;
     }
-    evaluate() {
-        const result = this.expression.evaluate();
+    evaluate(param) {
+        const result = param.evaluate();
         return Math.log(result);
     }
 }
 exports.LnOperator = LnOperator;
+LnOperator.names = new Array("ln");
 
 
 /***/ }),
@@ -782,17 +1125,18 @@ exports.LnOperator = LnOperator;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LogOperator = void 0;
 const OperatorFunctionAbstract_1 = __webpack_require__(/*! ../../abstract/OperatorFunctionAbstract */ "./src/expression/abstract/OperatorFunctionAbstract.ts");
-const Expression_1 = __webpack_require__(/*! ../../Expression */ "./src/expression/Expression.ts");
 class LogOperator extends OperatorFunctionAbstract_1.OperatorFunctionAbstract {
-    constructor(...terms) {
-        super("Log", "Log", new Expression_1.Expression(...terms));
+    constructor() {
+        super(...arguments);
+        this.names = LogOperator.names;
     }
-    evaluate() {
-        const result = this.expression.evaluate();
+    evaluate(param) {
+        const result = param.evaluate();
         return Math.log10(result);
     }
 }
 exports.LogOperator = LogOperator;
+LogOperator.names = new Array("log");
 
 
 /***/ }),
@@ -807,17 +1151,18 @@ exports.LogOperator = LogOperator;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SinOperator = void 0;
 const OperatorFunctionAbstract_1 = __webpack_require__(/*! ../../abstract/OperatorFunctionAbstract */ "./src/expression/abstract/OperatorFunctionAbstract.ts");
-const Expression_1 = __webpack_require__(/*! ../../Expression */ "./src/expression/Expression.ts");
 class SinOperator extends OperatorFunctionAbstract_1.OperatorFunctionAbstract {
-    constructor(...terms) {
-        super("Sin", "sin", new Expression_1.Expression(...terms));
+    constructor() {
+        super(...arguments);
+        this.names = SinOperator.names;
     }
-    evaluate() {
-        const result = this.expression.evaluate();
+    evaluate(param) {
+        const result = param.evaluate();
         return Math.sin(result);
     }
 }
 exports.SinOperator = SinOperator;
+SinOperator.names = new Array("sin");
 
 
 /***/ }),
@@ -832,17 +1177,18 @@ exports.SinOperator = SinOperator;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SquareRootOperator = void 0;
 const OperatorFunctionAbstract_1 = __webpack_require__(/*! ../../abstract/OperatorFunctionAbstract */ "./src/expression/abstract/OperatorFunctionAbstract.ts");
-const Expression_1 = __webpack_require__(/*! ../../Expression */ "./src/expression/Expression.ts");
 class SquareRootOperator extends OperatorFunctionAbstract_1.OperatorFunctionAbstract {
-    constructor(...terms) {
-        super("Sqrt", "√", new Expression_1.Expression(...terms));
+    constructor() {
+        super(...arguments);
+        this.names = SquareRootOperator.names;
     }
-    evaluate() {
-        const result = this.expression.evaluate();
+    evaluate(param) {
+        const result = param.evaluate();
         return Math.sqrt(result);
     }
 }
 exports.SquareRootOperator = SquareRootOperator;
+SquareRootOperator.names = new Array("sqrt", "√");
 
 
 /***/ }),
@@ -857,17 +1203,43 @@ exports.SquareRootOperator = SquareRootOperator;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TanOperator = void 0;
 const OperatorFunctionAbstract_1 = __webpack_require__(/*! ../../abstract/OperatorFunctionAbstract */ "./src/expression/abstract/OperatorFunctionAbstract.ts");
-const Expression_1 = __webpack_require__(/*! ../../Expression */ "./src/expression/Expression.ts");
 class TanOperator extends OperatorFunctionAbstract_1.OperatorFunctionAbstract {
-    constructor(...terms) {
-        super("Tan", "tan", new Expression_1.Expression(...terms));
+    constructor() {
+        super(...arguments);
+        this.names = TanOperator.names;
     }
-    evaluate() {
-        const result = this.expression.evaluate();
+    evaluate(param) {
+        const result = param.evaluate();
         return Math.tan(result);
     }
 }
 exports.TanOperator = TanOperator;
+TanOperator.names = new Array("tan");
+
+
+/***/ }),
+
+/***/ "./src/expression/operators/function/index.ts":
+/*!****************************************************!*\
+  !*** ./src/expression/operators/function/index.ts ***!
+  \****************************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TanOperator = exports.SquareRootOperator = exports.SinOperator = exports.LogOperator = exports.LnOperator = exports.CosOperator = void 0;
+var Cos_operator_1 = __webpack_require__(/*! ./Cos.operator */ "./src/expression/operators/function/Cos.operator.ts");
+Object.defineProperty(exports, "CosOperator", ({ enumerable: true, get: function () { return Cos_operator_1.CosOperator; } }));
+var Ln_operator_1 = __webpack_require__(/*! ./Ln.operator */ "./src/expression/operators/function/Ln.operator.ts");
+Object.defineProperty(exports, "LnOperator", ({ enumerable: true, get: function () { return Ln_operator_1.LnOperator; } }));
+var Log_operator_1 = __webpack_require__(/*! ./Log.operator */ "./src/expression/operators/function/Log.operator.ts");
+Object.defineProperty(exports, "LogOperator", ({ enumerable: true, get: function () { return Log_operator_1.LogOperator; } }));
+var Sin_operator_1 = __webpack_require__(/*! ./Sin.operator */ "./src/expression/operators/function/Sin.operator.ts");
+Object.defineProperty(exports, "SinOperator", ({ enumerable: true, get: function () { return Sin_operator_1.SinOperator; } }));
+var SquareRoot_operator_1 = __webpack_require__(/*! ./SquareRoot.operator */ "./src/expression/operators/function/SquareRoot.operator.ts");
+Object.defineProperty(exports, "SquareRootOperator", ({ enumerable: true, get: function () { return SquareRoot_operator_1.SquareRootOperator; } }));
+var Tan_operator_1 = __webpack_require__(/*! ./Tan.operator */ "./src/expression/operators/function/Tan.operator.ts");
+Object.defineProperty(exports, "TanOperator", ({ enumerable: true, get: function () { return Tan_operator_1.TanOperator; } }));
 
 
 /***/ }),
@@ -876,125 +1248,23 @@ exports.TanOperator = TanOperator;
 /*!*******************************************!*\
   !*** ./src/expression/operators/index.ts ***!
   \*******************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.TanOperator = exports.SquareRootOperator = exports.SinOperator = exports.LogOperator = exports.LnOperator = exports.CosOperator = exports.XorOperator = exports.OrOperator = exports.AndOperator = exports.PlusOperator = exports.MultiplyOperator = exports.MinusOperator = exports.ExponentOperator = exports.DivideOperator = void 0;
-var Divide_operator_1 = __webpack_require__(/*! ./arithmetic/Divide.operator */ "./src/expression/operators/arithmetic/Divide.operator.ts");
-Object.defineProperty(exports, "DivideOperator", ({ enumerable: true, get: function () { return Divide_operator_1.DivideOperator; } }));
-var Exponent_operator_1 = __webpack_require__(/*! ./arithmetic/Exponent.operator */ "./src/expression/operators/arithmetic/Exponent.operator.ts");
-Object.defineProperty(exports, "ExponentOperator", ({ enumerable: true, get: function () { return Exponent_operator_1.ExponentOperator; } }));
-var Minus_operator_1 = __webpack_require__(/*! ./arithmetic/Minus.operator */ "./src/expression/operators/arithmetic/Minus.operator.ts");
-Object.defineProperty(exports, "MinusOperator", ({ enumerable: true, get: function () { return Minus_operator_1.MinusOperator; } }));
-var Multiply_operator_1 = __webpack_require__(/*! ./arithmetic/Multiply.operator */ "./src/expression/operators/arithmetic/Multiply.operator.ts");
-Object.defineProperty(exports, "MultiplyOperator", ({ enumerable: true, get: function () { return Multiply_operator_1.MultiplyOperator; } }));
-var Plus_operator_1 = __webpack_require__(/*! ./arithmetic/Plus.operator */ "./src/expression/operators/arithmetic/Plus.operator.ts");
-Object.defineProperty(exports, "PlusOperator", ({ enumerable: true, get: function () { return Plus_operator_1.PlusOperator; } }));
-var And_operator_1 = __webpack_require__(/*! ./bitwise/And.operator */ "./src/expression/operators/bitwise/And.operator.ts");
-Object.defineProperty(exports, "AndOperator", ({ enumerable: true, get: function () { return And_operator_1.AndOperator; } }));
-var Or_operator_1 = __webpack_require__(/*! ./bitwise/Or.operator */ "./src/expression/operators/bitwise/Or.operator.ts");
-Object.defineProperty(exports, "OrOperator", ({ enumerable: true, get: function () { return Or_operator_1.OrOperator; } }));
-var Xor_operator_1 = __webpack_require__(/*! ./bitwise/Xor.operator */ "./src/expression/operators/bitwise/Xor.operator.ts");
-Object.defineProperty(exports, "XorOperator", ({ enumerable: true, get: function () { return Xor_operator_1.XorOperator; } }));
-var Cos_operator_1 = __webpack_require__(/*! ./function/Cos.operator */ "./src/expression/operators/function/Cos.operator.ts");
-Object.defineProperty(exports, "CosOperator", ({ enumerable: true, get: function () { return Cos_operator_1.CosOperator; } }));
-var Ln_operator_1 = __webpack_require__(/*! ./function/Ln.operator */ "./src/expression/operators/function/Ln.operator.ts");
-Object.defineProperty(exports, "LnOperator", ({ enumerable: true, get: function () { return Ln_operator_1.LnOperator; } }));
-var Log_operator_1 = __webpack_require__(/*! ./function/Log.operator */ "./src/expression/operators/function/Log.operator.ts");
-Object.defineProperty(exports, "LogOperator", ({ enumerable: true, get: function () { return Log_operator_1.LogOperator; } }));
-var Sin_operator_1 = __webpack_require__(/*! ./function/Sin.operator */ "./src/expression/operators/function/Sin.operator.ts");
-Object.defineProperty(exports, "SinOperator", ({ enumerable: true, get: function () { return Sin_operator_1.SinOperator; } }));
-var SquareRoot_operator_1 = __webpack_require__(/*! ./function/SquareRoot.operator */ "./src/expression/operators/function/SquareRoot.operator.ts");
-Object.defineProperty(exports, "SquareRootOperator", ({ enumerable: true, get: function () { return SquareRoot_operator_1.SquareRootOperator; } }));
-var Tan_operator_1 = __webpack_require__(/*! ./function/Tan.operator */ "./src/expression/operators/function/Tan.operator.ts");
-Object.defineProperty(exports, "TanOperator", ({ enumerable: true, get: function () { return Tan_operator_1.TanOperator; } }));
-
-
-/***/ }),
-
-/***/ "./src/expression/utils/VariableMap.ts":
-/*!*********************************************!*\
-  !*** ./src/expression/utils/VariableMap.ts ***!
-  \*********************************************/
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.VariableMap = void 0;
-class VariableMap extends Map {
-    constructor() {
-        super();
-        this.set('a', 0);
-        this.set('b', 0);
-        this.set('c', 0);
-        this.set('d', 0);
-        this.set('e', 0);
-        this.set('f', 0);
-        this.set('g', 0);
-        this.set('h', 0);
-        this.set('i', 0);
-        this.set('j', 0);
-        this.set('k', 0);
-        this.set('l', 0);
-        this.set('m', 0);
-        this.set('n', 0);
-        this.set('o', 0);
-        this.set('p', 0);
-        this.set('q', 0);
-        this.set('r', 0);
-        this.set('s', 0);
-        this.set('t', 0);
-        this.set('u', 0);
-        this.set('v', 0);
-        this.set('w', 0);
-        this.set('x', 0);
-        this.set('y', 0);
-        this.set('z', 0);
-        this.set('A', 0);
-        this.set('B', 0);
-        this.set('C', 0);
-        this.set('D', 0);
-        this.set('E', 0);
-        this.set('F', 0);
-        this.set('G', 0);
-        this.set('H', 0);
-        this.set('I', 0);
-        this.set('J', 0);
-        this.set('K', 0);
-        this.set('L', 0);
-        this.set('M', 0);
-        this.set('N', 0);
-        this.set('O', 0);
-        this.set('P', 0);
-        this.set('Q', 0);
-        this.set('R', 0);
-        this.set('S', 0);
-        this.set('T', 0);
-        this.set('U', 0);
-        this.set('V', 0);
-        this.set('W', 0);
-        this.set('X', 0);
-        this.set('Y', 0);
-        this.set('Z', 0);
-    }
-}
-exports.VariableMap = VariableMap;
-
-
-/***/ }),
-
-/***/ "./src/expression/utils/index.ts":
-/*!***************************************!*\
-  !*** ./src/expression/utils/index.ts ***!
-  \***************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.VariableMap = void 0;
-var VariableMap_1 = __webpack_require__(/*! ./VariableMap */ "./src/expression/utils/VariableMap.ts");
-Object.defineProperty(exports, "VariableMap", ({ enumerable: true, get: function () { return VariableMap_1.VariableMap; } }));
+__exportStar(__webpack_require__(/*! ./arithmetic */ "./src/expression/operators/arithmetic/index.ts"), exports);
+__exportStar(__webpack_require__(/*! ./bitwise */ "./src/expression/operators/bitwise/index.ts"), exports);
+__exportStar(__webpack_require__(/*! ./function */ "./src/expression/operators/function/index.ts"), exports);
 
 
 /***/ }),

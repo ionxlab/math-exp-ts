@@ -1,10 +1,11 @@
 declare module 'math-exp-ts/core/ExpressionBuilder' {
-  import { Expression } from "math-exp-ts/expression/Expression";
   import { TermAbstract } from "math-exp-ts/expression/abstract/TermAbstract";
+  import { Expression } from "math-exp-ts/expression/index";
   export class ExpressionBuilder {
       private expression;
       constructor(...terms: TermAbstract[]);
       add(term: TermAbstract, index?: number): number;
+      addAll(...terms: TermAbstract[]): void;
       remove(index: any): Expression;
       getExpression(): Expression;
       clear(): void;
@@ -12,11 +13,20 @@ declare module 'math-exp-ts/core/ExpressionBuilder' {
 
 }
 declare module 'math-exp-ts/core/ExpressionParser' {
-  import { Expression } from "math-exp-ts/expression/Expression";
+  import { Expression } from "math-exp-ts/expression/index";
   export class ExpressionParser {
-      private expressionString;
-      constructor();
-      parse(): Expression;
+      private expressionStr;
+      constructor(expressionStr?: string);
+      setExpressionStr(expressionStr?: string): void;
+      parse(expressionStr?: string): Expression;
+      private static parseElem;
+  }
+
+}
+declare module 'math-exp-ts/exceptions/BracketsMissmatchException' {
+  import { ParserException } from "math-exp-ts/exceptions/ParserException";
+  export class BracketsMissmatchException extends ParserException {
+      constructor(message?: string);
   }
 
 }
@@ -30,6 +40,13 @@ declare module 'math-exp-ts/exceptions/DivisionByZeroException' {
 declare module 'math-exp-ts/exceptions/EmptyExpressionException' {
   import { EvaluateException } from "math-exp-ts/exceptions/EvaluateException";
   export class EmptyExpressionException extends EvaluateException {
+      constructor(message?: string);
+  }
+
+}
+declare module 'math-exp-ts/exceptions/EmptyExpressionStringException' {
+  import { ParserException } from "math-exp-ts/exceptions/ParserException";
+  export class EmptyExpressionStringException extends ParserException {
       constructor(message?: string);
   }
 
@@ -67,10 +84,28 @@ declare module 'math-exp-ts/exceptions/ParserException' {
   }
 
 }
+declare module 'math-exp-ts/exceptions/UndefinedExpressionException' {
+  import { EvaluateException } from "math-exp-ts/exceptions/EvaluateException";
+  export class UndefinedExpressionException extends EvaluateException {
+      constructor(message?: string);
+  }
+
+}
+declare module 'math-exp-ts/exceptions/UndefinedExpressionStringException' {
+  import { ParserException } from "math-exp-ts/exceptions/ParserException";
+  export class UndefinedExpressionStringException extends ParserException {
+      constructor(message?: string);
+  }
+
+}
 declare module 'math-exp-ts/expression/abstract/OperandAbstract' {
   import { TermAbstract } from "math-exp-ts/expression/abstract/TermAbstract";
   export abstract class OperandAbstract extends TermAbstract {
       readonly precedence: number;
+      protected _brackets: boolean;
+      constructor(brackets?: boolean);
+      get brackets(): boolean;
+      set brackets(active: boolean);
       abstract evaluate(): number;
   }
 
@@ -78,77 +113,77 @@ declare module 'math-exp-ts/expression/abstract/OperandAbstract' {
 declare module 'math-exp-ts/expression/abstract/OperatorAbstract' {
   import { TermAbstract } from "math-exp-ts/expression/abstract/TermAbstract";
   export abstract class OperatorAbstract extends TermAbstract {
-      name: string;
-      symbol: string;
-      protected constructor(name: string, symbol: string);
+      abstract readonly names: Array<string>;
+      toString(nameId?: number): string;
   }
 
 }
 declare module 'math-exp-ts/expression/abstract/OperatorFunctionAbstract' {
   import { OperatorAbstract } from "math-exp-ts/expression/abstract/OperatorAbstract";
-  import { Expression } from "math-exp-ts/expression/Expression";
+  import { Constant } from "math-exp-ts/expression/operands/index";
   export abstract class OperatorFunctionAbstract extends OperatorAbstract {
-      name: string;
-      symbol: string;
-      expression: Expression;
       readonly precedence: number;
-      protected constructor(name: string, symbol: string, expression?: Expression);
-      abstract evaluate(): number;
-      toString(): string;
+      abstract evaluate(param: Constant): number;
   }
 
 }
 declare module 'math-exp-ts/expression/abstract/OperatorLeftRightAbstract' {
   import { OperatorAbstract } from "math-exp-ts/expression/abstract/OperatorAbstract";
+  import { Constant } from "math-exp-ts/expression/operands/index";
   export abstract class OperatorLeftRightAbstract extends OperatorAbstract {
-      name: string;
-      symbol: string;
-      protected constructor(name: string, symbol: string);
-      abstract evaluate(left: number, right: number): number;
-      toString(): string;
+      abstract evaluate(left: Constant, right: Constant): number;
   }
 
 }
 declare module 'math-exp-ts/expression/abstract/TermAbstract' {
   export abstract class TermAbstract {
       abstract readonly precedence: number;
-      abstract toString(): string;
+      abstract toString(nameId?: number): string;
   }
 
 }
-declare module 'math-exp-ts/expression/Expression' {
+declare module 'math-exp-ts/expression/core/Expression' {
   import { TermAbstract } from "math-exp-ts/expression/abstract/TermAbstract";
   export class Expression extends TermAbstract {
       static debug: boolean;
       readonly precedence: number;
-      terms: Array<TermAbstract>;
-      private brackets;
+      private _brackets;
+      private _terms;
       constructor(...terms: TermAbstract[]);
-      push(term: TermAbstract): Expression;
-      pop(): TermAbstract;
-      shift(): TermAbstract;
-      unshift(term: TermAbstract): Expression;
-      setBrackets(active: boolean): void;
+      get terms(): Array<TermAbstract>;
+      set terms(value: Array<TermAbstract>);
+      get brackets(): boolean;
+      set brackets(active: boolean);
       evaluate(): number;
-      private evaluateTerm;
-      private Log;
+      private static evaluateTerm;
+      private static Log;
       clone(): Expression;
       toString(): string;
   }
 
 }
+declare module 'math-exp-ts/expression/core/index' {
+  export { Expression } from 'math-exp-ts/expression/core/Expression';
+  export { Variables } from 'math-exp-ts/expression/core/Variables';
+
+}
+declare module 'math-exp-ts/expression/core/Variables' {
+  export class Variables {
+      static map: Map<string, number>;
+  }
+
+}
 declare module 'math-exp-ts/expression/index' {
-  export { Expression } from 'math-exp-ts/expression/Expression';
+  export * from 'math-exp-ts/expression/core/index';
   export * from 'math-exp-ts/expression/operators/index';
   export * from 'math-exp-ts/expression/operands/index';
-  export * from 'math-exp-ts/expression/utils/index';
 
 }
 declare module 'math-exp-ts/expression/operands/Constant' {
   import { OperandAbstract } from "math-exp-ts/expression/abstract/OperandAbstract";
   export class Constant extends OperandAbstract {
       value: number;
-      constructor(value: number);
+      constructor(value: number, brackets?: boolean);
       evaluate(): number;
       toString(): string;
   }
@@ -161,13 +196,10 @@ declare module 'math-exp-ts/expression/operands/index' {
 }
 declare module 'math-exp-ts/expression/operands/Variable' {
   import { OperandAbstract } from "math-exp-ts/expression/abstract/OperandAbstract";
-  import { VariableMap } from "math-exp-ts/expression/utils/VariableMap";
   export class Variable extends OperandAbstract {
-      private coefficient;
-      private letter;
-      private static _values;
-      constructor(letter: string, coefficient?: number, value?: number);
-      static get values(): VariableMap;
+      private identifier;
+      readonly precedence: number;
+      constructor(identifier: string, brackets?: boolean, value?: number);
       evaluate(): number;
       toString(): string;
   }
@@ -175,136 +207,120 @@ declare module 'math-exp-ts/expression/operands/Variable' {
 }
 declare module 'math-exp-ts/expression/operators/arithmetic/Divide.operator' {
   import { OperatorLeftRightAbstract } from "math-exp-ts/expression/abstract/OperatorLeftRightAbstract";
+  import { Constant } from "math-exp-ts/expression/operands/index";
   export class DivideOperator extends OperatorLeftRightAbstract {
+      static readonly names: Array<string>;
+      readonly names: Array<string>;
       readonly precedence: number;
-      constructor();
-      evaluate(left: number, right: number): number;
+      evaluate(left: Constant, right: Constant): number;
   }
 
 }
 declare module 'math-exp-ts/expression/operators/arithmetic/Exponent.operator' {
   import { OperatorLeftRightAbstract } from "math-exp-ts/expression/abstract/OperatorLeftRightAbstract";
+  import { Constant } from "math-exp-ts/expression/operands/index";
   export class ExponentOperator extends OperatorLeftRightAbstract {
+      static readonly names: Array<string>;
+      readonly names: Array<string>;
       readonly precedence: number;
-      constructor();
-      evaluate(left: number, right: number): number;
+      evaluate(left: Constant, right: Constant): number;
   }
 
 }
-declare module 'math-exp-ts/expression/operators/arithmetic/Minus.operator' {
-  import { OperatorLeftRightAbstract } from "math-exp-ts/expression/abstract/OperatorLeftRightAbstract";
-  export class MinusOperator extends OperatorLeftRightAbstract {
-      readonly precedence: number;
-      constructor();
-      evaluate(left: number, right: number): number;
-  }
-
-}
-declare module 'math-exp-ts/expression/operators/arithmetic/Multiply.operator' {
-  import { OperatorLeftRightAbstract } from "math-exp-ts/expression/abstract/OperatorLeftRightAbstract";
-  export class MultiplyOperator extends OperatorLeftRightAbstract {
-      readonly precedence: number;
-      constructor();
-      evaluate(left: number, right: number): number;
-  }
-
-}
-declare module 'math-exp-ts/expression/operators/arithmetic/Plus.operator' {
-  import { OperatorLeftRightAbstract } from "math-exp-ts/expression/abstract/OperatorLeftRightAbstract";
-  export class PlusOperator extends OperatorLeftRightAbstract {
-      readonly precedence: number;
-      constructor();
-      evaluate(left: number, right: number): number;
-  }
-
-}
-declare module 'math-exp-ts/expression/operators/bitwise/And.operator' {
-  import { OperatorLeftRightAbstract } from "math-exp-ts/expression/abstract/OperatorLeftRightAbstract";
-  export class AndOperator extends OperatorLeftRightAbstract {
-      readonly precedence: number;
-      evaluate(left: number, right: number): number;
-  }
-
-}
-declare module 'math-exp-ts/expression/operators/bitwise/Or.operator' {
-  import { OperatorLeftRightAbstract } from "math-exp-ts/expression/abstract/OperatorLeftRightAbstract";
-  export class OrOperator extends OperatorLeftRightAbstract {
-      readonly precedence: number;
-      evaluate(left: number, right: number): number;
-  }
-
-}
-declare module 'math-exp-ts/expression/operators/bitwise/Xor.operator' {
-  import { OperatorLeftRightAbstract } from "math-exp-ts/expression/abstract/OperatorLeftRightAbstract";
-  export class XorOperator extends OperatorLeftRightAbstract {
-      readonly precedence: number;
-      evaluate(left: number, right: number): number;
-  }
-
-}
-declare module 'math-exp-ts/expression/operators/function/Cos.operator' {
-  import { OperatorFunctionAbstract } from "math-exp-ts/expression/abstract/OperatorFunctionAbstract";
-  import { TermAbstract } from "math-exp-ts/expression/abstract/TermAbstract";
-  export class CosOperator extends OperatorFunctionAbstract {
-      constructor(...terms: TermAbstract[]);
-      evaluate(): number;
-  }
-
-}
-declare module 'math-exp-ts/expression/operators/function/Ln.operator' {
-  import { OperatorFunctionAbstract } from "math-exp-ts/expression/abstract/OperatorFunctionAbstract";
-  import { TermAbstract } from "math-exp-ts/expression/abstract/TermAbstract";
-  export class LnOperator extends OperatorFunctionAbstract {
-      constructor(...terms: TermAbstract[]);
-      evaluate(): number;
-  }
-
-}
-declare module 'math-exp-ts/expression/operators/function/Log.operator' {
-  import { OperatorFunctionAbstract } from "math-exp-ts/expression/abstract/OperatorFunctionAbstract";
-  import { TermAbstract } from "math-exp-ts/expression/abstract/TermAbstract";
-  export class LogOperator extends OperatorFunctionAbstract {
-      constructor(...terms: TermAbstract[]);
-      evaluate(): number;
-  }
-
-}
-declare module 'math-exp-ts/expression/operators/function/Sin.operator' {
-  import { OperatorFunctionAbstract } from "math-exp-ts/expression/abstract/OperatorFunctionAbstract";
-  import { TermAbstract } from "math-exp-ts/expression/abstract/TermAbstract";
-  export class SinOperator extends OperatorFunctionAbstract {
-      constructor(...terms: TermAbstract[]);
-      evaluate(): number;
-  }
-
-}
-declare module 'math-exp-ts/expression/operators/function/SquareRoot.operator' {
-  import { OperatorFunctionAbstract } from "math-exp-ts/expression/abstract/OperatorFunctionAbstract";
-  import { TermAbstract } from "math-exp-ts/expression/abstract/TermAbstract";
-  export class SquareRootOperator extends OperatorFunctionAbstract {
-      constructor(...terms: TermAbstract[]);
-      evaluate(): number;
-  }
-
-}
-declare module 'math-exp-ts/expression/operators/function/Tan.operator' {
-  import { OperatorFunctionAbstract } from "math-exp-ts/expression/abstract/OperatorFunctionAbstract";
-  import { TermAbstract } from "math-exp-ts/expression/abstract/TermAbstract";
-  export class TanOperator extends OperatorFunctionAbstract {
-      constructor(...terms: TermAbstract[]);
-      evaluate(): number;
-  }
-
-}
-declare module 'math-exp-ts/expression/operators/index' {
+declare module 'math-exp-ts/expression/operators/arithmetic/index' {
   export { DivideOperator } from 'math-exp-ts/expression/operators/arithmetic/Divide.operator';
   export { ExponentOperator } from 'math-exp-ts/expression/operators/arithmetic/Exponent.operator';
   export { MinusOperator } from 'math-exp-ts/expression/operators/arithmetic/Minus.operator';
   export { MultiplyOperator } from 'math-exp-ts/expression/operators/arithmetic/Multiply.operator';
   export { PlusOperator } from 'math-exp-ts/expression/operators/arithmetic/Plus.operator';
+
+}
+declare module 'math-exp-ts/expression/operators/arithmetic/Minus.operator' {
+  import { OperatorLeftRightAbstract } from "math-exp-ts/expression/abstract/OperatorLeftRightAbstract";
+  import { Constant } from "math-exp-ts/expression/operands/index";
+  export class MinusOperator extends OperatorLeftRightAbstract {
+      static readonly names: Array<string>;
+      readonly names: Array<string>;
+      readonly precedence: number;
+      evaluate(left: Constant, right: Constant): number;
+  }
+
+}
+declare module 'math-exp-ts/expression/operators/arithmetic/Multiply.operator' {
+  import { OperatorLeftRightAbstract } from "math-exp-ts/expression/abstract/OperatorLeftRightAbstract";
+  import { Constant } from "math-exp-ts/expression/operands/index";
+  export class MultiplyOperator extends OperatorLeftRightAbstract {
+      static readonly names: Array<string>;
+      readonly names: Array<string>;
+      readonly precedence: number;
+      hidden: boolean;
+      constructor(hidden?: boolean);
+      evaluate(left: Constant, right: Constant): number;
+      toString(nameId?: number): string;
+  }
+
+}
+declare module 'math-exp-ts/expression/operators/arithmetic/Plus.operator' {
+  import { OperatorLeftRightAbstract } from "math-exp-ts/expression/abstract/OperatorLeftRightAbstract";
+  import { Constant } from "math-exp-ts/expression/operands/index";
+  export class PlusOperator extends OperatorLeftRightAbstract {
+      static readonly names: Array<string>;
+      readonly names: Array<string>;
+      readonly precedence: number;
+      evaluate(left: Constant, right: Constant): number;
+  }
+
+}
+declare module 'math-exp-ts/expression/operators/bitwise/And.operator' {
+  import { OperatorLeftRightAbstract } from "math-exp-ts/expression/abstract/OperatorLeftRightAbstract";
+  import { Constant } from "math-exp-ts/expression/operands/index";
+  export class AndOperator extends OperatorLeftRightAbstract {
+      static readonly names: Array<string>;
+      readonly names: Array<string>;
+      readonly precedence: number;
+      evaluate(left: Constant, right: Constant): number;
+  }
+
+}
+declare module 'math-exp-ts/expression/operators/bitwise/index' {
   export { AndOperator } from 'math-exp-ts/expression/operators/bitwise/And.operator';
   export { OrOperator } from 'math-exp-ts/expression/operators/bitwise/Or.operator';
   export { XorOperator } from 'math-exp-ts/expression/operators/bitwise/Xor.operator';
+
+}
+declare module 'math-exp-ts/expression/operators/bitwise/Or.operator' {
+  import { OperatorLeftRightAbstract } from "math-exp-ts/expression/abstract/OperatorLeftRightAbstract";
+  import { Constant } from "math-exp-ts/expression/operands/index";
+  export class OrOperator extends OperatorLeftRightAbstract {
+      static readonly names: Array<string>;
+      readonly names: Array<string>;
+      readonly precedence: number;
+      evaluate(left: Constant, right: Constant): number;
+  }
+
+}
+declare module 'math-exp-ts/expression/operators/bitwise/Xor.operator' {
+  import { OperatorLeftRightAbstract } from "math-exp-ts/expression/abstract/OperatorLeftRightAbstract";
+  import { Constant } from "math-exp-ts/expression/operands/index";
+  export class XorOperator extends OperatorLeftRightAbstract {
+      static readonly names: Array<string>;
+      readonly names: Array<string>;
+      readonly precedence: number;
+      evaluate(left: Constant, right: Constant): number;
+  }
+
+}
+declare module 'math-exp-ts/expression/operators/function/Cos.operator' {
+  import { OperatorFunctionAbstract } from "math-exp-ts/expression/abstract/OperatorFunctionAbstract";
+  import { Constant } from "math-exp-ts/expression/operands/index";
+  export class CosOperator extends OperatorFunctionAbstract {
+      static readonly names: Array<string>;
+      readonly names: Array<string>;
+      evaluate(param: Constant): number;
+  }
+
+}
+declare module 'math-exp-ts/expression/operators/function/index' {
   export { CosOperator } from 'math-exp-ts/expression/operators/function/Cos.operator';
   export { LnOperator } from 'math-exp-ts/expression/operators/function/Ln.operator';
   export { LogOperator } from 'math-exp-ts/expression/operators/function/Log.operator';
@@ -313,14 +329,60 @@ declare module 'math-exp-ts/expression/operators/index' {
   export { TanOperator } from 'math-exp-ts/expression/operators/function/Tan.operator';
 
 }
-declare module 'math-exp-ts/expression/utils/index' {
-  export { VariableMap } from 'math-exp-ts/expression/utils/VariableMap';
+declare module 'math-exp-ts/expression/operators/function/Ln.operator' {
+  import { OperatorFunctionAbstract } from "math-exp-ts/expression/abstract/OperatorFunctionAbstract";
+  import { Constant } from "math-exp-ts/expression/operands/index";
+  export class LnOperator extends OperatorFunctionAbstract {
+      static readonly names: Array<string>;
+      readonly names: Array<string>;
+      evaluate(param: Constant): number;
+  }
 
 }
-declare module 'math-exp-ts/expression/utils/VariableMap' {
-  export class VariableMap extends Map<string, number> {
-      constructor();
+declare module 'math-exp-ts/expression/operators/function/Log.operator' {
+  import { OperatorFunctionAbstract } from "math-exp-ts/expression/abstract/OperatorFunctionAbstract";
+  import { Constant } from "math-exp-ts/expression/operands/index";
+  export class LogOperator extends OperatorFunctionAbstract {
+      static readonly names: Array<string>;
+      readonly names: Array<string>;
+      evaluate(param: Constant): number;
   }
+
+}
+declare module 'math-exp-ts/expression/operators/function/Sin.operator' {
+  import { OperatorFunctionAbstract } from "math-exp-ts/expression/abstract/OperatorFunctionAbstract";
+  import { Constant } from "math-exp-ts/expression/operands/index";
+  export class SinOperator extends OperatorFunctionAbstract {
+      static readonly names: Array<string>;
+      readonly names: Array<string>;
+      evaluate(param: Constant): number;
+  }
+
+}
+declare module 'math-exp-ts/expression/operators/function/SquareRoot.operator' {
+  import { OperatorFunctionAbstract } from "math-exp-ts/expression/abstract/OperatorFunctionAbstract";
+  import { Constant } from "math-exp-ts/expression/operands/index";
+  export class SquareRootOperator extends OperatorFunctionAbstract {
+      static readonly names: Array<string>;
+      readonly names: Array<string>;
+      evaluate(param: Constant): number;
+  }
+
+}
+declare module 'math-exp-ts/expression/operators/function/Tan.operator' {
+  import { OperatorFunctionAbstract } from "math-exp-ts/expression/abstract/OperatorFunctionAbstract";
+  import { Constant } from "math-exp-ts/expression/operands/index";
+  export class TanOperator extends OperatorFunctionAbstract {
+      static readonly names: Array<string>;
+      readonly names: Array<string>;
+      evaluate(param: Constant): number;
+  }
+
+}
+declare module 'math-exp-ts/expression/operators/index' {
+  export * from 'math-exp-ts/expression/operators/arithmetic/index';
+  export * from 'math-exp-ts/expression/operators/bitwise/index';
+  export * from 'math-exp-ts/expression/operators/function/index';
 
 }
 declare module 'math-exp-ts/index' {
