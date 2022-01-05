@@ -481,6 +481,7 @@ const operands_1 = __webpack_require__(/*! ../operands */ "./src/expression/oper
 const MissingTermException_1 = __webpack_require__(/*! ../../exceptions/MissingTermException */ "./src/exceptions/MissingTermException.ts");
 const MissingOperandException_1 = __webpack_require__(/*! ../../exceptions/MissingOperandException */ "./src/exceptions/MissingOperandException.ts");
 const EmptyExpressionException_1 = __webpack_require__(/*! ../../exceptions/EmptyExpressionException */ "./src/exceptions/EmptyExpressionException.ts");
+const EvaluateException_1 = __webpack_require__(/*! ../../exceptions/EvaluateException */ "./src/exceptions/EvaluateException.ts");
 class Expression extends TermAbstract_1.TermAbstract {
     constructor(...terms) {
         super();
@@ -509,6 +510,7 @@ class Expression extends TermAbstract_1.TermAbstract {
         Expression.Log("Evaluating:", this.toString());
         // make a clone for editing
         let temp = this.clone();
+        let tempStr = temp.toString();
         // loop until one constant is left
         while (temp._terms.length > 1 || !(temp._terms[0] instanceof operands_1.Constant)) {
             let highest = -1;
@@ -522,6 +524,9 @@ class Expression extends TermAbstract_1.TermAbstract {
             });
             Expression.evaluateTerm(temp, highestId);
             Expression.Log("Temporary expression:", temp.toString());
+            if (temp._terms.length > 1 && tempStr === temp.toString())
+                throw new EvaluateException_1.EvaluateException("Error while evaluating.");
+            tempStr = temp.toString();
         }
         return temp._terms[0].evaluate();
     }
@@ -535,6 +540,13 @@ class Expression extends TermAbstract_1.TermAbstract {
             Expression.Log("Term is an 'Expression'");
             value = term.evaluate();
             expression._terms[index] = new operands_1.Constant(value, true);
+            // handle coefficients
+            const left = expression._terms[index - 1];
+            if (left instanceof Expression || left instanceof OperandAbstract_1.OperandAbstract) {
+                const leftValue = left.evaluate();
+                expression._terms[index] = new operands_1.Constant(value * leftValue);
+                expression._terms.splice(index - 1, 1);
+            }
         }
         else if (term instanceof OperandAbstract_1.OperandAbstract) {
             if (term instanceof operands_1.Constant)
@@ -598,7 +610,7 @@ class Expression extends TermAbstract_1.TermAbstract {
     }
 }
 exports.Expression = Expression;
-Expression.debug = true;
+Expression.debug = false;
 
 
 /***/ }),
