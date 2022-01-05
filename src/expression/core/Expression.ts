@@ -7,9 +7,10 @@ import {Constant, Variable} from "../operands";
 import {MissingTermException} from "../../exceptions/MissingTermException";
 import {MissingOperandException} from "../../exceptions/MissingOperandException";
 import {EmptyExpressionException} from "../../exceptions/EmptyExpressionException";
+import {EvaluateException} from "../../exceptions/EvaluateException";
 
 export class Expression extends TermAbstract {
-  public static debug = true;
+  public static debug = false;
   readonly precedence: number = 19;
 
   private _brackets: boolean = true;
@@ -47,6 +48,7 @@ export class Expression extends TermAbstract {
 
     // make a clone for editing
     let temp = this.clone();
+    let tempStr = temp.toString();
 
     // loop until one constant is left
     while(temp._terms.length>1 || !(temp._terms[0] instanceof Constant)) {
@@ -62,6 +64,11 @@ export class Expression extends TermAbstract {
       });
       Expression.evaluateTerm(temp, highestId);
       Expression.Log("Temporary expression:", temp.toString());
+
+      if(temp._terms.length>1 && tempStr === temp.toString())
+        throw new EvaluateException("Error while evaluating.");
+
+      tempStr = temp.toString();
     }
 
     return (temp._terms[0] as OperandAbstract).evaluate();
@@ -80,6 +87,15 @@ export class Expression extends TermAbstract {
       Expression.Log("Term is an 'Expression'");
       value = term.evaluate();
       expression._terms[index] = new Constant(value, true);
+
+      // handle coefficients
+      const left = expression._terms[index-1];
+      if(left instanceof Expression || left instanceof OperandAbstract) {
+        const leftValue = left.evaluate();
+
+        expression._terms[index] = new Constant(value*leftValue);
+        expression._terms.splice(index-1, 1);
+      }
 
     } else if(term instanceof OperandAbstract) {
       if(term instanceof Constant)
