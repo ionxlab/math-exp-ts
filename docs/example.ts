@@ -1,4 +1,9 @@
-import {ExpressionBuilder, MultiplyOperator, Expression, Variables, Variable, Constant, PlusOperator, MinusOperator, SquareRootOperator} from 'math-exp-ts';
+import {
+  ExpressionParser, ExpressionBuilder, Expression,
+  Constant, Variable, Variables,
+  MultiplyOperator, PlusOperator, MinusOperator,
+  SquareRootOperator
+} from 'math-exp-ts';
 
 // Measure elapsed time of a lambda function
 function chrono(lambda: () => any) {
@@ -83,6 +88,19 @@ chrono(() => {
   const value = builder.getExpression().evaluate();
 
   console.log("Expression:", builder.getExpression().toString());
+  console.log("Variable: 'A'=", Variables.map.get('A'));
+  console.log("Value:", value);
+});
+
+console.log("------------------------------------------------------------------");
+chrono(() => {
+  const parser = new ExpressionParser("2(2+2*(4-2*A))");
+
+  const expression = parser.parse();
+  const value = expression.evaluate();
+
+  console.log("String:", parser.getExpressionStr());
+  console.log("Expression:", expression.toString());
   console.log("Variable: 'A'=", Variables.map.get('A'));
   console.log("Value:", value);
 });

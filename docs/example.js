@@ -45,3 +45,13 @@ chrono(function () {
     console.log("Value:", value);
 });
 console.log("------------------------------------------------------------------");
+chrono(function () {
+    var parser = new math_exp_ts_1.ExpressionParser("2(2+2*(4-2*A))");
+    var expression = parser.parse();
+    var value = expression.evaluate();
+    console.log("String:", parser.getExpressionStr());
+    console.log("Expression:", expression.toString());
+    console.log("Variable: 'A'=", math_exp_ts_1.Variables.map.get('A'));
+    console.log("Value:", value);
+});
+console.log("------------------------------------------------------------------");
