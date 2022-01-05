@@ -11,7 +11,7 @@ function chrono(lambda) {
 }
 // Configure static properties
 math_exp_ts_1.Variables.map.set('A', 9);
-//Expression.debug = false;
+//Expression.debug = true;
 console.log("------------------------------------------------------------------");
 chrono(function () {
     var builder = new math_exp_ts_1.ExpressionBuilder(new math_exp_ts_1.Constant(2), new math_exp_ts_1.PlusOperator(), new math_exp_ts_1.Constant(2), new math_exp_ts_1.MultiplyOperator(), new math_exp_ts_1.Variable('A'));
