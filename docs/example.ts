@@ -11,7 +11,7 @@ function chrono(lambda: () => any) {
 
 // Configure static properties
 Variables.map.set('A', 9);
-//Expression.debug = false;
+//Expression.debug = true;
 
 console.log("------------------------------------------------------------------");
 chrono(() => {
