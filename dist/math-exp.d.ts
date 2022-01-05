@@ -17,7 +17,8 @@ declare module 'math-exp-ts/core/ExpressionParser' {
   export class ExpressionParser {
       private expressionStr;
       constructor(expressionStr?: string);
-      setExpressionStr(expressionStr?: string): void;
+      getExpressionStr(): string;
+      setExpressionStr(expressionStr: string): void;
       parse(expressionStr?: string): Expression;
       private static parseElem;
   }

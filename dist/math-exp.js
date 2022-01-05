@@ -76,19 +76,22 @@ class ExpressionParser {
     constructor(expressionStr) {
         this.expressionStr = expressionStr;
     }
+    getExpressionStr() {
+        return this.expressionStr;
+    }
     setExpressionStr(expressionStr) {
         this.expressionStr = expressionStr;
     }
     parse(expressionStr) {
         if (expressionStr !== undefined)
-            this.setExpressionStr(expressionStr);
+            this.expressionStr = expressionStr;
         // check expression string
         if (!this.expressionStr)
             throw new UndefinedExpressionStringException_1.UndefinedExpressionStringException();
         if (this.expressionStr == "")
             throw new EmptyExpressionStringException_1.EmptyExpressionStringException();
         // parse all elements from expression string
-        const matches = this.expressionStr.match(/[a-z0-9]+|[+\-*\/()^]|[&|]+/gi);
+        const matches = this.expressionStr.match(/\d+|[a-z]+|[+\-*\/()^]|[&|]+/gi);
         // check number of brackets
         const leftBrackets = matches.filter(value => value == '(');
         const rightBrackets = matches.filter(value => value == ')');
@@ -122,19 +125,15 @@ class ExpressionParser {
     static parseElem(elem, currentExpression) {
         let term;
         // if elem matches a numerical constant [0-9]+
-        let match = elem.match(/^[0-9]+$/i);
+        let match = elem.match(/^\d+$/i);
         if (match) {
             term = new expression_2.Constant(parseFloat(elem));
             currentExpression.terms.push(term);
             return term;
         }
-        // if elem matches a left bracket with a coefficient
-        match = elem.match(/^([0-9]*)\($/i);
+        // if elem matches a left bracket
+        match = elem.match(/^\($/i);
         if (match) {
-            if (match[1]) {
-                currentExpression.terms.push(new expression_2.Constant(parseFloat(match[1])));
-                currentExpression.terms.push(new expression_1.MultiplyOperator());
-            }
             term = new expression_1.Expression();
             currentExpression.terms.push(term);
             return term;
@@ -144,13 +143,9 @@ class ExpressionParser {
         if (match) {
             return currentExpression;
         }
-        // if match a named variable with a coefficient
-        match = elem.match(/^([0-9]*)([a-z]+)$/i);
+        // if match a named variable
+        match = elem.match(/^([a-z]+|[+\-*\/^]|[&|]+)$/i);
         if (match) {
-            if (match[1].length > 0) {
-                currentExpression.terms.push(new expression_2.Constant(parseFloat(match[1])));
-                currentExpression.terms.push(new expression_1.MultiplyOperator());
-            }
             // if elem matches an operator
             // iterate over all operators
             for (const key of OperatorKeys) {
@@ -158,7 +153,7 @@ class ExpressionParser {
                 // iterate over all operator names
                 for (const name of Operator.names) {
                     // if name matches, return the constructed operator
-                    if (name === match[2]) {
+                    if (name === match[1]) {
                         term = new Operators[key]();
                         currentExpression.terms.push(term);
                         return term;
@@ -166,7 +161,7 @@ class ExpressionParser {
                 }
             }
             // it's just a variable
-            term = new expression_2.Variable(match[2]);
+            term = new expression_2.Variable(match[1]);
             currentExpression.terms.push(term);
             return term;
         }
